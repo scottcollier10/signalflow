@@ -6,6 +6,7 @@ from src.normalizer.storage import ExecutionStorage
 from src.services.workflow_service import WorkflowService
 from src.analysis.critical_path import CriticalPathAnalyzer
 from src.analysis.bottlenecks import BottleneckAnalyzer
+from src.analysis.error_clustering import ErrorClusteringAnalyzer
 from supabase import create_client
 from datetime import datetime
 import json
@@ -332,6 +333,93 @@ async def get_bottlenecks(
     except HTTPException:
         raise
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/workflows/{workflow_id}/executions/{execution_id}/error-analysis")
+async def get_error_analysis(
+    workflow_id: str,
+    execution_id: str,
+    include_historical: bool = True,
+    similarity_threshold: float = 0.75,
+    execution_window: int = 100
+):
+    """
+    Analyze errors in an execution and cluster with historical patterns.
+
+    This endpoint:
+    1. Extracts errors from the current execution
+    2. Generates semantic embeddings for each error
+    3. Clusters similar errors using DBSCAN algorithm
+    4. Detects error patterns (timeout, auth, rate limit, etc.)
+    5. Calculates severity based on frequency and type
+    6. Provides evidence-backed insights with historical context
+
+    Expected for test data:
+    - Workflow: 8ce95407-8381-4756-85aa-c5c2a0251384
+    - Execution: 15720484-8e33-464b-84b8-0936ecfa7096
+    - API response < 500ms
+
+    Query Parameters:
+    - include_historical: Whether to cluster with past errors (default: True)
+    - similarity_threshold: Minimum similarity for clustering 0-1 (default: 0.75)
+    - execution_window: Number of past executions to include (default: 100)
+
+    Returns:
+    {
+        "execution_errors": [list of errors in this execution],
+        "clusters": [list of error clusters with patterns],
+        "summary": {statistics about errors and clusters},
+        "analysis_context": {metadata about the analysis}
+    }
+    """
+    try:
+        # Validate query parameters
+        if not 0 <= similarity_threshold <= 1:
+            raise HTTPException(
+                status_code=400,
+                detail="similarity_threshold must be between 0 and 1"
+            )
+
+        if not 1 <= execution_window <= 1000:
+            raise HTTPException(
+                status_code=400,
+                detail="execution_window must be between 1 and 1000"
+            )
+
+        # Create Supabase client
+        supabase = create_client(settings.supabase_url, settings.supabase_key)
+
+        # Create analyzer
+        analyzer = ErrorClusteringAnalyzer(supabase)
+
+        # Analyze errors
+        result = await analyzer.analyze_execution(
+            execution_id=execution_id,
+            workflow_id=workflow_id,
+            include_historical=include_historical,
+            similarity_threshold=similarity_threshold,
+            execution_window=execution_window
+        )
+
+        return {
+            "success": True,
+            "data": result.to_dict()
+        }
+
+    except ValueError as e:
+        # Validation errors or missing data
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "VALIDATION_ERROR",
+                "message": str(e)
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in error analysis: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
