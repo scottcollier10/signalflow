@@ -4,6 +4,10 @@ from src.config import settings
 from src.normalizer.parser import N8nExecutionParser
 from src.normalizer.storage import ExecutionStorage
 from src.services.workflow_service import WorkflowService
+from src.analysis.critical_path import CriticalPathAnalyzer
+from src.analysis.bottlenecks import BottleneckAnalyzer
+from supabase import create_client
+from datetime import datetime
 import json
 
 app = FastAPI(
@@ -179,6 +183,152 @@ async def get_execution_graph(workflow_id: str, execution_id: str):
 
         return graph
 
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/workflows/{workflow_id}/executions/{execution_id}/critical-path")
+async def get_critical_path(workflow_id: str, execution_id: str):
+    """
+    Get critical path for a workflow execution.
+
+    The critical path is the longest sequence of nodes through the execution,
+    determining which nodes actually block overall completion time.
+
+    Expected for test data:
+    - Workflow: 8ce95407-8381-4756-85aa-c5c2a0251384
+    - Execution: 15720484-8e33-464b-84b8-0936ecfa7096
+    - Path length: 10-15 nodes
+    - Should include claude_ai_generate node
+    """
+    try:
+        # Create Supabase client
+        supabase = create_client(settings.supabase_url, settings.supabase_key)
+
+        # Create analyzer and calculate critical path
+        analyzer = CriticalPathAnalyzer(supabase)
+        result = analyzer.get_critical_path_with_details(execution_id, workflow_id)
+
+        return result
+
+    except ValueError as e:
+        # Graph validation errors (e.g., cycles detected)
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "INVALID_GRAPH",
+                "message": str(e)
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/workflows/{workflow_id}/executions/{execution_id}/bottlenecks")
+async def get_bottlenecks(
+    workflow_id: str,
+    execution_id: str,
+    limit: int = 10,
+    severity: str = None,
+    min_score: int = None
+):
+    """
+    Get bottleneck analysis for a workflow execution.
+
+    Scores each node by its impact on overall workflow performance using:
+    - Duration Factor (40%): Percentile-based duration ranking
+    - Position Factor (30%): Critical path location
+    - Frequency Factor (20%): Execution count multiplier
+    - Variance Factor (10%): Performance consistency
+
+    Expected for test data:
+    - Workflow: 8ce95407-8381-4756-85aa-c5c2a0251384
+    - Execution: 15720484-8e33-464b-84b8-0936ecfa7096
+    - Top bottleneck: "Claude: Generate Variant" with score 65-75
+    - Second: "Rate Limit Delay" with score 65-70
+    - API response < 150ms
+
+    Query Parameters:
+    - limit: Number of top bottlenecks to return (default: 10)
+    - severity: Filter by severity level (low, medium, high, severe)
+    - min_score: Only return nodes with score >= threshold
+    """
+    try:
+        # Create Supabase client
+        supabase = create_client(settings.supabase_url, settings.supabase_key)
+
+        # Create analyzer
+        analyzer = BottleneckAnalyzer(supabase)
+
+        # Analyze bottlenecks
+        bottlenecks = analyzer.analyze(execution_id, workflow_id, limit=100)  # Get all first
+
+        # Apply filters
+        if severity:
+            bottlenecks = [b for b in bottlenecks if b.severity == severity]
+        if min_score is not None:
+            bottlenecks = [b for b in bottlenecks if b.score >= min_score]
+
+        # Apply limit after filters
+        bottlenecks = bottlenecks[:limit]
+
+        # Get all bottlenecks for summary (before limit)
+        all_bottlenecks = analyzer.analyze(execution_id, workflow_id, limit=1000)
+        summary = analyzer.get_summary(all_bottlenecks, len(all_bottlenecks))
+
+        # Get total execution duration for context
+        critical_path_data = analyzer._load_critical_path(execution_id)
+        total_duration_ms = critical_path_data.get('total_duration_ms', 0) if critical_path_data else 0
+
+        # Calculate critical path percentage
+        path_percentage = 0
+        if critical_path_data:
+            path_nodes_count = len(critical_path_data['path_nodes'])
+            total_nodes = len(all_bottlenecks)
+            path_percentage = (path_nodes_count / total_nodes * 100) if total_nodes > 0 else 0
+
+        return {
+            "success": True,
+            "data": {
+                "bottlenecks": [b.to_dict() for b in bottlenecks],
+                "summary": {
+                    **summary,
+                    "total_execution_duration_ms": total_duration_ms
+                },
+                "analysis_context": {
+                    "execution_id": execution_id,
+                    "analysis_type": "single_execution",
+                    "critical_path_percentage": round(path_percentage, 2),
+                    "calculated_at": datetime.utcnow().isoformat() + "Z",
+                    "from_cache": False
+                }
+            }
+        }
+
+    except ValueError as e:
+        # Critical path not found or invalid data
+        error_message = str(e)
+        if "Critical path must be calculated" in error_message:
+            return {
+                "success": False,
+                "error": {
+                    "code": "CRITICAL_PATH_REQUIRED",
+                    "message": error_message,
+                    "details": "Run GET /critical-path endpoint first"
+                }
+            }
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "code": "ANALYSIS_ERROR",
+                    "message": error_message
+                }
+            )
     except HTTPException:
         raise
     except Exception as e:
