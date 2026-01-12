@@ -9,8 +9,9 @@ import { ExecutionVisualizer } from '@/components/execution-visualizer';
 
 export default function ExecutionPage() {
   // Test data IDs from the API
-  const workflowId = '8ce95407-8381-4756-85aa-c5c2a0251384';
-  const executionId = '15720484-8e33-464b-84b8-0936ecfa7096';
+  // Updated after database restore (Jan 11, 2026)
+  const workflowId = '6a71673e-623d-42c9-a7c5-09e8acda50f4';
+  const executionId = '09f2d02b-2137-4da8-8e68-cd15535bee3f';
 
   return (
     <ExecutionVisualizer

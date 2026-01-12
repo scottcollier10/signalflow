@@ -7,6 +7,7 @@ from src.services.workflow_service import WorkflowService
 from src.analysis.critical_path import CriticalPathAnalyzer
 from src.analysis.bottlenecks import BottleneckAnalyzer
 from src.analysis.error_clustering import ErrorClusteringAnalyzer
+from src.analysis.recommendations import RecommendationEngine
 from supabase import create_client
 from datetime import datetime
 import json
@@ -423,8 +424,90 @@ async def get_error_analysis(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/workflows/{workflow_id}/executions/{execution_id}/recommendations")
+async def get_recommendations(workflow_id: str, execution_id: str):
+    """
+    Generate evidence-backed optimization recommendations for a workflow execution.
+
+    This endpoint applies 15 detection rules to identify optimization opportunities:
+
+    Performance Rules (1-7):
+    1. Sequential API Calls → Parallelize
+    2. Long Node Duration → Optimize Algorithm
+    3. High Loop Iteration → Batch Processing
+    4. Duplicate HTTP Requests → Add Caching
+    5. Synchronous Waits → Use Webhooks
+    6. Large Data Transfers → Compress/Stream
+    7. Hardcoded Delays → Remove/Justify
+
+    Reliability Rules (8-15):
+    8. Repeated Timeouts → Increase Timeout
+    9. Auth Failures → Fix Credentials
+    10. Rate Limits → Add Backoff/Queuing
+    11. Network Errors → Add Retry Logic
+    12. Validation Errors → Add Input Checks
+    13. Resource Errors → Scale Infrastructure
+    14. High Error Rate on Node → Investigate Root Cause
+    15. Error Cluster Across Nodes → Systemic Issue
+
+    Each recommendation includes:
+    - Evidence with clickable links to proof
+    - Impact score (time saved or errors prevented)
+    - Effort estimate (LOW/MEDIUM/HIGH)
+    - Priority score (0-100)
+    - Code examples where applicable
+
+    Expected for test data:
+    - Workflow: 8ce95407-8381-4756-85aa-c5c2a0251384
+    - Execution: 15720484-8e33-464b-84b8-0936ecfa7096
+    - Expected: 6-8 recommendations
+    - API response < 600ms
+
+    Returns:
+    {
+        "success": true,
+        "data": {
+            "recommendations": [list of recommendations sorted by priority],
+            "summary": {
+                "total_recommendations": 8,
+                "by_category": {"performance": 5, "reliability": 3},
+                "by_impact": {"CRITICAL": 1, "HIGH": 3, "MEDIUM": 4},
+                "top_priority": {recommendation with highest score}
+            }
+        }
+    }
+    """
+    try:
+        # Create Supabase client
+        supabase = create_client(settings.supabase_url, settings.supabase_key)
+
+        # Create recommendation engine
+        engine = RecommendationEngine(supabase)
+
+        # Generate recommendations
+        result = await engine.generate_recommendations(execution_id, workflow_id)
+
+        return result
+
+    except ValueError as e:
+        # Missing required analysis data
+        error_message = str(e)
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "ANALYSIS_REQUIRED",
+                "message": error_message,
+                "details": "Ensure critical path, bottleneck, and error analysis have been run first"
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error generating recommendations: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # TODO: Add endpoints for:
 # - POST /api/workflows (import workflow)
 # - POST /api/analyze (trigger analysis)
 # - GET /api/workflows/{id}/stats
-# - GET /api/recommendations/{workflow_id}

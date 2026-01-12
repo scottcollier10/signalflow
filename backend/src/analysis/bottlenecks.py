@@ -151,6 +151,9 @@ class BottleneckAnalyzer:
         for i, bottleneck in enumerate(bottlenecks):
             bottleneck.rank = i + 1
 
+        # Phase 5: Store results in database for recommendation engine
+        self._store_results(execution_id, workflow_id, bottlenecks)
+
         # Return top N bottlenecks
         return bottlenecks[:limit]
 
@@ -170,7 +173,7 @@ class BottleneckAnalyzer:
             if response.data and len(response.data) > 0:
                 cached = response.data[0]
                 return {
-                    'path_nodes': cached['path_nodes'],
+                    'path_nodes': cached.get('path_node_ids', cached.get('path_nodes', [])),
                     'total_duration_ms': cached['total_duration_ms']
                 }
         except Exception as e:
@@ -434,6 +437,37 @@ class BottleneckAnalyzer:
             return "medium"
         else:
             return "low"
+
+    def _store_results(self, execution_id: str, workflow_id: str, bottlenecks: List[BottleneckScore]):
+        """
+        Store bottleneck results in database for recommendation engine
+
+        Saves each bottleneck to node_stats table for use by recommendation engine
+        """
+        try:
+            # Delete existing records for this execution first
+            self.db.table('node_stats').delete().eq('execution_id', execution_id).execute()
+
+            # Prepare records for batch insert
+            records = []
+            for bottleneck in bottlenecks:
+                records.append({
+                    'execution_id': execution_id,
+                    'workflow_id': workflow_id,
+                    'node_id': bottleneck.node_id,
+                    'node_name': bottleneck.node_name,
+                    'node_type': bottleneck.node_type,
+                    'bottleneck_score': bottleneck.score,
+                    'total_duration_ms': bottleneck.duration_ms,
+                    'is_on_critical_path': bottleneck.on_critical_path
+                })
+
+            # Batch insert all records
+            if records:
+                self.db.table('node_stats').insert(records).execute()
+        except Exception as e:
+            # Don't fail the request if caching fails
+            print(f"Warning: Failed to cache bottleneck results: {e}")
 
     def get_summary(self, bottlenecks: List[BottleneckScore], total_nodes: int) -> Dict:
         """

@@ -486,6 +486,10 @@ class CriticalPathAnalyzer:
     def _store_result(self, execution_id: str, workflow_id: str, result: CriticalPathResult):
         """Store critical path result in database cache"""
         try:
+            # Delete existing record for this execution first
+            self.db.table('critical_paths').delete().eq('execution_id', execution_id).execute()
+
+            # Insert new record
             self.db.table('critical_paths').insert({
                 'execution_id': execution_id,
                 'path_nodes': result.path_node_ids,
@@ -514,7 +518,7 @@ class CriticalPathAnalyzer:
                     execution_timing = self._load_execution_timing(execution_id)
                     execution_graph = self._build_execution_graph(workflow_graph, execution_timing)
 
-                    path_node_ids = cached['path_nodes']
+                    path_node_ids = cached.get('path_node_ids', cached.get('path_nodes', []))
                     total_nodes = len(workflow_graph['nodes'])
                     executed_nodes = len(execution_timing)
                     skipped_nodes = total_nodes - executed_nodes
