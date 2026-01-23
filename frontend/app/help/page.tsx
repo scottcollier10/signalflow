@@ -1,203 +1,455 @@
 'use client';
 
-/**
- * Help & Documentation Page (Placeholder)
- * User guides and support resources
- */
-
-import Link from 'next/link';
+import { useState } from 'react';
 import { AppLayout } from '@/components/layout';
+import {
+  HelpCircle,
+  ChevronDown,
+  ChevronRight,
+  Upload,
+  Zap,
+  AlertTriangle,
+  Lightbulb,
+  Code,
+  Keyboard,
+  ExternalLink,
+  BookOpen,
+  Target,
+  Clock,
+  TrendingUp
+} from 'lucide-react';
 
-interface HelpSection {
+interface AccordionItemProps {
   title: string;
-  description: string;
   icon: React.ReactNode;
-  articles?: string[];
+  children: React.ReactNode;
+  defaultOpen?: boolean;
 }
 
-const helpSections: HelpSection[] = [
-  {
-    title: 'Quick Start Guide',
-    description: 'Get up and running with SignalFlow in minutes',
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-      </svg>
-    ),
-    articles: ['Importing your first execution', 'Understanding the dashboard', 'Navigating analysis views'],
-  },
-  {
-    title: 'Understanding Analysis Results',
-    description: 'Learn how to interpret critical paths, bottlenecks, and recommendations',
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-      </svg>
-    ),
-    articles: ['What is a critical path?', 'Reading bottleneck scores', 'Acting on recommendations'],
-  },
-  {
-    title: 'Bottleneck Scoring Explained',
-    description: 'Deep dive into how SignalFlow calculates performance scores',
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-      </svg>
-    ),
-    articles: ['Severity levels (Critical, High, Medium, Low)', 'Time impact calculations', 'Effort estimation methodology'],
-  },
-  {
-    title: 'API Documentation',
-    description: 'Reference for the SignalFlow REST API',
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-      </svg>
-    ),
-    articles: ['Authentication', 'Execution endpoints', 'Analysis endpoints', 'Webhook integrations'],
-  },
-  {
-    title: 'Contact Support',
-    description: 'Get help from the SignalFlow team',
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
-      </svg>
-    ),
-    articles: ['Report a bug', 'Feature requests', 'Community Discord'],
-  },
-];
+function AccordionItem({ title, icon, children, defaultOpen = false }: AccordionItemProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          {icon}
+          <span className="font-medium">{title}</span>
+        </div>
+        {isOpen ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+      </button>
+      {isOpen && (
+        <div className="p-4 bg-white border-t">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function HelpPage() {
   return (
     <AppLayout>
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Dashboard
-          </Link>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-gray-900">Help & Documentation</h1>
-            <span className="px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
-              Coming Soon
-            </span>
-          </div>
-          <p className="mt-2 text-gray-600">
-            Learn how to get the most out of SignalFlow&apos;s workflow analysis
-          </p>
+      <div className="max-w-4xl mx-auto p-6 space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <HelpCircle className="w-6 h-6" />
+            Help & Documentation
+          </h1>
+          <p className="text-gray-500 mt-1">Learn how to get the most out of SignalFlow</p>
         </div>
 
-        {/* Coming Soon Banner */}
-        <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-6 mb-8">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
+        {/* Quick Start */}
+        <section className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white">
+          <h2 className="text-xl font-semibold mb-2">Quick Start</h2>
+          <p className="text-purple-100 mb-4">Get up and running in 3 simple steps:</p>
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className="bg-white/10 backdrop-blur rounded-lg p-4">
+              <div className="text-2xl font-bold">1</div>
+              <div className="font-medium">Import</div>
+              <div className="text-sm text-purple-100">Upload execution JSON or fetch from n8n</div>
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Documentation Coming Soon</h2>
-              <p className="mt-1 text-gray-600">
-                We&apos;re writing comprehensive guides to help you master workflow analysis.
-                For now, explore the UI - it&apos;s designed to be intuitive!
-              </p>
+            <div className="bg-white/10 backdrop-blur rounded-lg p-4">
+              <div className="text-2xl font-bold">2</div>
+              <div className="font-medium">Analyze</div>
+              <div className="text-sm text-purple-100">Review bottlenecks and recommendations</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-lg p-4">
+              <div className="text-2xl font-bold">3</div>
+              <div className="font-medium">Optimize</div>
+              <div className="text-sm text-purple-100">Export to Claude Code for fixes</div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Help Sections */}
+        {/* Documentation Sections */}
         <div className="space-y-4">
-          {helpSections.map((section) => (
-            <div
-              key={section.title}
-              className="bg-white border border-gray-200 rounded-lg p-5 opacity-60 cursor-not-allowed"
-            >
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 text-gray-400">
-                  {section.icon}
+
+          <AccordionItem
+            title="Importing Executions"
+            icon={<Upload className="w-5 h-5 text-blue-500" />}
+            defaultOpen={true}
+          >
+            <div className="space-y-4 text-sm">
+              <p>SignalFlow supports three ways to import n8n execution data:</p>
+
+              <div className="space-y-3">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="font-medium text-blue-900">Option 1: Fetch from n8n API</div>
+                  <ol className="list-decimal list-inside text-blue-800 mt-2 space-y-1">
+                    <li>Enter your n8n instance URL</li>
+                    <li>Enter the Execution ID (from n8n URL)</li>
+                    <li>Enter your API key (n8n → Settings → API)</li>
+                    <li>Click &quot;Import Execution&quot;</li>
+                  </ol>
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-gray-900">{section.title}</h3>
-                    <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded">
-                      Planned
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm text-gray-500">{section.description}</p>
-                  {section.articles && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {section.articles.map((article) => (
-                        <span
-                          key={article}
-                          className="px-2 py-1 bg-gray-50 text-gray-400 text-xs rounded border border-gray-100"
-                        >
-                          {article}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+
+                <div className="bg-gray-50 border rounded-lg p-3">
+                  <div className="font-medium">Option 2: Upload JSON File</div>
+                  <ol className="list-decimal list-inside text-gray-600 mt-2 space-y-1">
+                    <li>In n8n, go to Executions</li>
+                    <li>Click on an execution → Export</li>
+                    <li>In SignalFlow, drag and drop the file</li>
+                  </ol>
+                </div>
+
+                <div className="bg-gray-50 border rounded-lg p-3">
+                  <div className="font-medium">Option 3: Paste JSON</div>
+                  <ol className="list-decimal list-inside text-gray-600 mt-2 space-y-1">
+                    <li>Copy execution JSON from n8n</li>
+                    <li>Go to Import → Paste JSON tab</li>
+                    <li>Paste and click Import</li>
+                  </ol>
                 </div>
               </div>
             </div>
-          ))}
+          </AccordionItem>
+
+          <AccordionItem
+            title="Understanding Bottleneck Scores"
+            icon={<AlertTriangle className="w-5 h-5 text-orange-500" />}
+          >
+            <div className="space-y-4 text-sm">
+              <p>Each bottleneck is scored on a 0-100 scale based on four factors:</p>
+
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="border p-2 text-left">Factor</th>
+                      <th className="border p-2 text-left">Weight</th>
+                      <th className="border p-2 text-left">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="border p-2 font-medium">Duration</td>
+                      <td className="border p-2">40 points</td>
+                      <td className="border p-2">Time taken relative to total workflow</td>
+                    </tr>
+                    <tr>
+                      <td className="border p-2 font-medium">Position</td>
+                      <td className="border p-2">30 points</td>
+                      <td className="border p-2">Impact on critical path (max if on critical path)</td>
+                    </tr>
+                    <tr>
+                      <td className="border p-2 font-medium">Frequency</td>
+                      <td className="border p-2">20 points</td>
+                      <td className="border p-2">How consistently the node is slow</td>
+                    </tr>
+                    <tr>
+                      <td className="border p-2 font-medium">Variance</td>
+                      <td className="border p-2">10 points</td>
+                      <td className="border p-2">Performance predictability</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
+                <div className="flex items-center gap-2 p-2 bg-red-50 border border-red-200 rounded">
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                  <span className="text-sm">Severe: 90-100</span>
+                </div>
+                <div className="flex items-center gap-2 p-2 bg-orange-50 border border-orange-200 rounded">
+                  <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                  <span className="text-sm">High: 70-89</span>
+                </div>
+                <div className="flex items-center gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                  <span className="text-sm">Medium: 50-69</span>
+                </div>
+                <div className="flex items-center gap-2 p-2 bg-gray-50 border border-gray-200 rounded">
+                  <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                  <span className="text-sm">Low: 0-49</span>
+                </div>
+              </div>
+            </div>
+          </AccordionItem>
+
+          <AccordionItem
+            title="Critical Path Analysis"
+            icon={<Zap className="w-5 h-5 text-yellow-500" />}
+          >
+            <div className="space-y-4 text-sm">
+              <p>The <strong>critical path</strong> is the longest sequence of dependent nodes that determines your workflow&apos;s total execution time.</p>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="font-medium text-yellow-900 mb-2">Why It Matters</div>
+                <ul className="list-disc list-inside text-yellow-800 space-y-1">
+                  <li>Nodes ON the critical path directly impact total time</li>
+                  <li>Optimizing critical path nodes = faster workflow</li>
+                  <li>Nodes OFF the critical path have &quot;slack time&quot;</li>
+                </ul>
+              </div>
+
+              <p>In the Playback view, critical path nodes are highlighted, and the Critical Path tab shows the full sequence with timing breakdown.</p>
+            </div>
+          </AccordionItem>
+
+          <AccordionItem
+            title="Using Guided Fix"
+            icon={<Target className="w-5 h-5 text-purple-500" />}
+          >
+            <div className="space-y-4 text-sm">
+              <p>Guided Fix lets you click on any node in the Playback view to see its bottleneck details and get targeted optimization help.</p>
+
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-sm font-bold">1</div>
+                  <div>
+                    <div className="font-medium">Go to Playback tab</div>
+                    <div className="text-gray-600">Bottleneck nodes are highlighted by severity (red = severe)</div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-sm font-bold">2</div>
+                  <div>
+                    <div className="font-medium">Click a highlighted node</div>
+                    <div className="text-gray-600">A panel opens showing score breakdown and recommendations</div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-sm font-bold">3</div>
+                  <div>
+                    <div className="font-medium">Click &quot;Copy Fix Prompt&quot;</div>
+                    <div className="text-gray-600">Generates a targeted prompt for Claude Code</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </AccordionItem>
+
+          <AccordionItem
+            title="Exporting to Claude Code"
+            icon={<Code className="w-5 h-5 text-green-500" />}
+          >
+            <div className="space-y-4 text-sm">
+              <p>SignalFlow can generate optimization prompts for Claude Code to help you implement fixes.</p>
+
+              <div className="space-y-3">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="font-medium text-green-900">Workflow-Wide Export</div>
+                  <ol className="list-decimal list-inside text-green-800 mt-2 space-y-1">
+                    <li>Go to Recommendations tab</li>
+                    <li>Click &quot;Export&quot; button</li>
+                    <li>Choose &quot;Copy Prompt&quot; or download</li>
+                    <li>Optionally download Workflow JSON</li>
+                    <li>Paste into Claude Code</li>
+                  </ol>
+                </div>
+
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                  <div className="font-medium text-purple-900">Node-Specific Export</div>
+                  <ol className="list-decimal list-inside text-purple-800 mt-2 space-y-1">
+                    <li>Go to Playback tab</li>
+                    <li>Click on a bottleneck node</li>
+                    <li>Click &quot;Copy Fix Prompt for Claude Code&quot;</li>
+                    <li>Paste into Claude Code for targeted help</li>
+                  </ol>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 border rounded-lg p-3">
+                <div className="font-medium">What&apos;s Included in Prompts:</div>
+                <ul className="list-disc list-inside text-gray-600 mt-2 space-y-1">
+                  <li>Workflow context (name, duration, node counts)</li>
+                  <li>Bottleneck details with score breakdowns</li>
+                  <li>Specific recommendations</li>
+                  <li>Safety instructions (preserve business logic)</li>
+                </ul>
+              </div>
+            </div>
+          </AccordionItem>
+
+          <AccordionItem
+            title="Recommendation Categories"
+            icon={<Lightbulb className="w-5 h-5 text-amber-500" />}
+          >
+            <div className="space-y-4 text-sm">
+              <p>Recommendations are grouped into three categories:</p>
+
+              <div className="space-y-3">
+                <div className="border rounded-lg p-3">
+                  <div className="flex items-center gap-2 font-medium">
+                    <TrendingUp className="w-4 h-4 text-blue-500" />
+                    Performance
+                  </div>
+                  <p className="text-gray-600 mt-1">Speed improvements and latency reduction</p>
+                  <ul className="list-disc list-inside text-gray-500 mt-2 text-xs">
+                    <li>Parallelize sequential operations</li>
+                    <li>Optimize slow nodes</li>
+                    <li>Reduce data payload sizes</li>
+                    <li>Add caching</li>
+                  </ul>
+                </div>
+
+                <div className="border rounded-lg p-3">
+                  <div className="flex items-center gap-2 font-medium">
+                    <AlertTriangle className="w-4 h-4 text-orange-500" />
+                    Reliability
+                  </div>
+                  <p className="text-gray-600 mt-1">Error handling and fault tolerance</p>
+                  <ul className="list-disc list-inside text-gray-500 mt-2 text-xs">
+                    <li>Add retry logic</li>
+                    <li>Implement error handling</li>
+                    <li>Set timeouts</li>
+                    <li>Add fallback paths</li>
+                  </ul>
+                </div>
+
+                <div className="border rounded-lg p-3">
+                  <div className="flex items-center gap-2 font-medium">
+                    <Clock className="w-4 h-4 text-green-500" />
+                    Cost Optimization
+                  </div>
+                  <p className="text-gray-600 mt-1">Resource efficiency improvements</p>
+                  <ul className="list-disc list-inside text-gray-500 mt-2 text-xs">
+                    <li>Reduce API calls</li>
+                    <li>Batch operations</li>
+                    <li>Optimize data storage</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </AccordionItem>
+
+          <AccordionItem
+            title="Keyboard Shortcuts"
+            icon={<Keyboard className="w-5 h-5 text-gray-500" />}
+          >
+            <div className="space-y-4 text-sm">
+              <p>Navigate SignalFlow faster with keyboard shortcuts:</p>
+
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="border p-2 text-left">Shortcut</th>
+                      <th className="border p-2 text-left">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="border p-2"><kbd className="px-2 py-1 bg-gray-100 rounded text-xs">G</kbd> then <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">D</kbd></td>
+                      <td className="border p-2">Go to Dashboard</td>
+                    </tr>
+                    <tr>
+                      <td className="border p-2"><kbd className="px-2 py-1 bg-gray-100 rounded text-xs">G</kbd> then <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">I</kbd></td>
+                      <td className="border p-2">Go to Import</td>
+                    </tr>
+                    <tr>
+                      <td className="border p-2"><kbd className="px-2 py-1 bg-gray-100 rounded text-xs">G</kbd> then <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">S</kbd></td>
+                      <td className="border p-2">Go to Settings</td>
+                    </tr>
+                    <tr>
+                      <td className="border p-2"><kbd className="px-2 py-1 bg-gray-100 rounded text-xs">?</kbd></td>
+                      <td className="border p-2">Show this help</td>
+                    </tr>
+                    <tr>
+                      <td className="border p-2"><kbd className="px-2 py-1 bg-gray-100 rounded text-xs">Esc</kbd></td>
+                      <td className="border p-2">Close panels/modals</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <p className="text-gray-500 text-xs">Note: Keyboard shortcuts are coming in a future update.</p>
+            </div>
+          </AccordionItem>
+
+          <AccordionItem
+            title="FAQ"
+            icon={<BookOpen className="w-5 h-5 text-indigo-500" />}
+          >
+            <div className="space-y-4 text-sm">
+              <div className="space-y-4">
+                <div>
+                  <div className="font-medium">How is this different from n8n&apos;s built-in execution view?</div>
+                  <p className="text-gray-600 mt-1">SignalFlow provides deeper analysis including bottleneck scoring, error clustering, and actionable recommendations. It helps you understand <em>why</em> workflows are slow, not just <em>what</em> happened.</p>
+                </div>
+
+                <div>
+                  <div className="font-medium">Does SignalFlow modify my n8n workflows?</div>
+                  <p className="text-gray-600 mt-1">No. SignalFlow is read-only. It analyzes execution data but never changes your workflows. The Claude Code export helps you make changes yourself.</p>
+                </div>
+
+                <div>
+                  <div className="font-medium">How accurate are the bottleneck scores?</div>
+                  <p className="text-gray-600 mt-1">Scores are calculated deterministically based on actual execution timing data. They reflect real performance impact, not estimates.</p>
+                </div>
+
+                <div>
+                  <div className="font-medium">Can I analyze multiple executions of the same workflow?</div>
+                  <p className="text-gray-600 mt-1">Yes! Import multiple executions to see patterns over time. The Dashboard groups them by workflow automatically.</p>
+                </div>
+
+                <div>
+                  <div className="font-medium">What if I have no recommendations?</div>
+                  <p className="text-gray-600 mt-1">That&apos;s good news! It means your workflow is running efficiently with no detected issues.</p>
+                </div>
+
+                <div>
+                  <div className="font-medium">Is my data secure?</div>
+                  <p className="text-gray-600 mt-1">All data is stored locally in your browser and your connected database. When exporting workflow JSON, credentials are automatically redacted.</p>
+                </div>
+              </div>
+            </div>
+          </AccordionItem>
+
         </div>
 
-        {/* Quick Tips */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-5">
-          <h3 className="font-medium text-blue-900 mb-3 flex items-center gap-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-            </svg>
-            Quick Tips
-          </h3>
-          <ul className="space-y-2 text-sm text-blue-800">
-            <li className="flex items-start gap-2">
-              <span className="text-blue-500 mt-0.5">•</span>
-              <span>Use the <strong>Playback</strong> tab to watch your workflow execute step-by-step</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-blue-500 mt-0.5">•</span>
-              <span><strong>Critical Path</strong> shows the longest chain of dependent nodes</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-blue-500 mt-0.5">•</span>
-              <span>Check <strong>Recommendations</strong> for actionable optimization suggestions</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-blue-500 mt-0.5">•</span>
-              <span>Click <strong>View Evidence</strong> on any recommendation to see supporting data</span>
-            </li>
-          </ul>
-        </div>
-
-        {/* Keyboard Shortcuts */}
-        <div className="mt-6 bg-gray-50 border border-gray-200 rounded-lg p-5">
-          <h3 className="font-medium text-gray-900 mb-3">Keyboard Shortcuts (Coming Soon)</h3>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-500">Toggle sidebar</span>
-              <kbd className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-mono">[</kbd>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-500">Search</span>
-              <kbd className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-mono">/</kbd>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-500">Play/Pause</span>
-              <kbd className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-mono">Space</kbd>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-500">Go to Dashboard</span>
-              <kbd className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs font-mono">G D</kbd>
-            </div>
+        {/* External Links */}
+        <section className="bg-gray-50 rounded-xl p-6">
+          <h3 className="font-semibold mb-4">Additional Resources</h3>
+          <div className="grid md:grid-cols-2 gap-4">
+            <a
+              href="https://docs.n8n.io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 p-3 bg-white border rounded-lg hover:border-purple-300 transition-colors"
+            >
+              <ExternalLink className="w-4 h-4 text-gray-400" />
+              <span>n8n Documentation</span>
+            </a>
+            <a
+              href="https://community.n8n.io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 p-3 bg-white border rounded-lg hover:border-purple-300 transition-colors"
+            >
+              <ExternalLink className="w-4 h-4 text-gray-400" />
+              <span>n8n Community</span>
+            </a>
           </div>
+        </section>
+
+        {/* Version Info */}
+        <div className="text-center text-sm text-gray-400 py-4">
+          SignalFlow v0.8 • Week 5 Build
         </div>
       </div>
     </AppLayout>

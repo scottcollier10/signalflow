@@ -999,6 +999,103 @@ async def fetch_n8n_execution(request: N8nFetchRequest):
         )
 
 
+# =============================================================================
+# Settings & Utility Endpoints
+# =============================================================================
+
+class N8nTestConnectionRequest(BaseModel):
+    """Request body for testing n8n connection."""
+    url: str
+    apiKey: str = ""
+
+
+@app.post("/api/n8n/test-connection")
+async def test_n8n_connection(request: N8nTestConnectionRequest):
+    """
+    Test connection to an n8n instance.
+
+    Attempts to fetch the workflows list to verify connectivity.
+    """
+    url = request.url.rstrip('/')
+    api_key = request.apiKey
+
+    if not url:
+        raise HTTPException(status_code=400, detail="URL is required")
+
+    # Ensure URL has protocol
+    if not url.startswith(('http://', 'https://')):
+        url = f'https://{url}'
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            headers = {"Accept": "application/json"}
+            if api_key:
+                headers['X-N8N-API-KEY'] = api_key
+
+            response = await client.get(f"{url}/api/v1/workflows", headers=headers)
+
+            if response.status_code == 200:
+                return {"status": "connected", "message": "Successfully connected to n8n"}
+            elif response.status_code == 401:
+                raise HTTPException(status_code=401, detail="Invalid API key")
+            elif response.status_code == 403:
+                raise HTTPException(status_code=403, detail="API key doesn't have permission")
+            else:
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"Connection failed: {response.text[:200]}"
+                )
+
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Connection timed out")
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=502, detail=f"Could not reach n8n instance: {str(e)}")
+
+
+@app.delete("/api/executions/all")
+async def delete_all_executions():
+    """
+    Delete ALL executions and related data.
+
+    WARNING: This is destructive and cannot be undone.
+    Deletes: execution_events, error_embeddings, node_stats, critical_paths, and all executions.
+    """
+    try:
+        supabase = create_client(settings.supabase_url, settings.supabase_key)
+
+        # Get all execution IDs first
+        result = supabase.table("executions").select("id").execute()
+        execution_ids = [e["id"] for e in (result.data or [])]
+
+        if not execution_ids:
+            return {"success": True, "deleted_count": 0, "message": "No executions to delete"}
+
+        deleted_count = len(execution_ids)
+
+        # Delete related data for all executions
+        for exec_id in execution_ids:
+            try:
+                supabase.table("execution_events").delete().eq("execution_id", exec_id).execute()
+                supabase.table("error_embeddings").delete().eq("execution_id", exec_id).execute()
+                supabase.table("node_stats").delete().eq("execution_id", exec_id).execute()
+                supabase.table("critical_paths").delete().eq("execution_id", exec_id).execute()
+            except Exception as e:
+                print(f"Warning: Error deleting related data for {exec_id}: {e}")
+
+        # Delete all executions
+        supabase.table("executions").delete().neq("id", "00000000-0000-0000-0000-000000000000").execute()
+
+        return {
+            "success": True,
+            "deleted_count": deleted_count,
+            "message": f"Deleted {deleted_count} executions and all related data"
+        }
+
+    except Exception as e:
+        print(f"Error deleting all executions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # TODO: Add endpoints for:
 # - POST /api/workflows (import workflow)
 # - POST /api/analyze (trigger analysis)
