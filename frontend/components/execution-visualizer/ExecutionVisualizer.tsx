@@ -2,21 +2,33 @@
 
 /**
  * Main execution visualizer container
- * Loads execution data and orchestrates playback
+ * Loads execution data and orchestrates playback with bottleneck highlighting
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Node } from 'reactflow';
 import { ExecutionData, ExecutionFlowNode } from './types';
 import { transformToReactFlowNodes, transformToReactFlowEdges } from './utils';
 import { useExecutionPlayback } from './hooks/useExecutionPlayback';
 import { WorkflowCanvas } from './WorkflowCanvas';
 import { PlaybackControls } from './PlaybackControls';
+import { NodeDetailPanel } from './NodeDetailPanel';
+import {
+  Bottleneck,
+  Recommendation,
+  fetchBottlenecks,
+  fetchRecommendations,
+} from '@/lib/api/analysis';
 
 interface ExecutionVisualizerProps {
   workflowId: string;
   executionId: string;
   apiBaseUrl?: string;
   onBack?: () => void;
+  // Optional: pass bottlenecks/recommendations from parent to avoid re-fetching
+  initialBottlenecks?: Bottleneck[];
+  initialRecommendations?: Recommendation[];
+  workflowName?: string;
 }
 
 export function ExecutionVisualizer({
@@ -24,10 +36,22 @@ export function ExecutionVisualizer({
   executionId,
   apiBaseUrl = 'http://localhost:8000',
   onBack,
+  initialBottlenecks,
+  initialRecommendations,
+  workflowName: initialWorkflowName,
 }: ExecutionVisualizerProps) {
   const [data, setData] = useState<ExecutionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Bottleneck and recommendation data
+  const [bottlenecks, setBottlenecks] = useState<Bottleneck[]>(initialBottlenecks || []);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>(initialRecommendations || []);
+  const [workflowName, setWorkflowName] = useState(initialWorkflowName || '');
+
+  // Node detail panel state
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [showNodePanel, setShowNodePanel] = useState(false);
 
   // Load execution data
   useEffect(() => {
@@ -46,6 +70,11 @@ export function ExecutionVisualizer({
 
         const executionData = await response.json();
         setData(executionData);
+
+        // Extract workflow name if available
+        if (executionData.workflow_name && !initialWorkflowName) {
+          setWorkflowName(executionData.workflow_name);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
@@ -54,7 +83,39 @@ export function ExecutionVisualizer({
     };
 
     fetchData();
-  }, [workflowId, executionId, apiBaseUrl]);
+  }, [workflowId, executionId, apiBaseUrl, initialWorkflowName]);
+
+  // Load bottlenecks if not provided
+  useEffect(() => {
+    if (initialBottlenecks) return;
+
+    const loadBottlenecks = async () => {
+      try {
+        const result = await fetchBottlenecks(apiBaseUrl, workflowId, executionId);
+        setBottlenecks(result.bottlenecks);
+      } catch (err) {
+        console.warn('Failed to load bottlenecks:', err);
+      }
+    };
+
+    loadBottlenecks();
+  }, [apiBaseUrl, workflowId, executionId, initialBottlenecks]);
+
+  // Load recommendations if not provided
+  useEffect(() => {
+    if (initialRecommendations) return;
+
+    const loadRecommendations = async () => {
+      try {
+        const result = await fetchRecommendations(apiBaseUrl, workflowId, executionId);
+        setRecommendations(result.recommendations);
+      } catch (err) {
+        console.warn('Failed to load recommendations:', err);
+      }
+    };
+
+    loadRecommendations();
+  }, [apiBaseUrl, workflowId, executionId, initialRecommendations]);
 
   // Transform data to React Flow format
   const { nodes: baseNodes, edges } = useMemo(() => {
@@ -67,15 +128,6 @@ export function ExecutionVisualizer({
       edges: transformToReactFlowEdges(data.edges),
     };
   }, [data]);
-
-  // Debug logging
-  React.useEffect(() => {
-    console.log('[ExecutionVisualizer] Data and nodes:', {
-      hasData: !!data,
-      nodeCount: baseNodes.length,
-      eventCount: data?.events?.length || 0
-    });
-  }, [data, baseNodes]);
 
   // Playback hook
   const { playbackState, nodeStates, controls } = useExecutionPlayback(
@@ -104,6 +156,50 @@ export function ExecutionVisualizer({
       } as ExecutionFlowNode;
     });
   }, [baseNodes, nodeStates]);
+
+  // Get bottleneck for a specific node
+  const getNodeBottleneck = useCallback((node: Node): Bottleneck | null => {
+    const nodeLabel = (node.data?.label || '').toLowerCase();
+    const nodeId = node.id.toLowerCase();
+
+    return bottlenecks.find(b => {
+      const bottleneckName = (b.node_name || '').toLowerCase();
+      const bottleneckId = (b.node_id || '').toLowerCase();
+
+      return (
+        bottleneckName === nodeLabel ||
+        bottleneckId === nodeId ||
+        bottleneckId === nodeLabel ||
+        bottleneckName === nodeId
+      );
+    }) || null;
+  }, [bottlenecks]);
+
+  // Get recommendations for a specific node
+  const getNodeRecommendations = useCallback((node: Node): Recommendation[] => {
+    const nodeLabel = (node.data?.label || '').toLowerCase();
+    const nodeId = node.id.toLowerCase();
+
+    return recommendations.filter(r => {
+      const affectedNodes = r.affected_node_ids || [];
+      return affectedNodes.some(id => {
+        const affectedId = id.toLowerCase();
+        return affectedId === nodeLabel || affectedId === nodeId;
+      });
+    });
+  }, [recommendations]);
+
+  // Handle node click
+  const handleNodeClick = useCallback((node: Node) => {
+    setSelectedNode(node);
+    setShowNodePanel(true);
+  }, []);
+
+  // Close node panel
+  const handleClosePanel = useCallback(() => {
+    setShowNodePanel(false);
+    setSelectedNode(null);
+  }, []);
 
   // Loading state
   if (loading) {
@@ -137,6 +233,10 @@ export function ExecutionVisualizer({
       </div>
     );
   }
+
+  // Get selected node's bottleneck and recommendations
+  const selectedBottleneck = selectedNode ? getNodeBottleneck(selectedNode) : null;
+  const selectedRecommendations = selectedNode ? getNodeRecommendations(selectedNode) : [];
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
@@ -172,6 +272,14 @@ export function ExecutionVisualizer({
                 </svg>
                 {data.event_count} events
               </span>
+              {bottlenecks.length > 0 && (
+                <span className="flex items-center gap-1 text-orange-600 font-medium">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  {bottlenecks.length} bottlenecks
+                </span>
+              )}
               <span className={`flex items-center gap-1 font-medium ${
                 data.status === 'success' ? 'text-green-600' :
                 data.status === 'error' ? 'text-red-600' :
@@ -237,8 +345,26 @@ export function ExecutionVisualizer({
       </header>
 
       {/* Canvas */}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <WorkflowCanvas nodes={updatedNodes} edges={edges} />
+      <div className="flex-1 min-h-0 overflow-hidden relative">
+        <WorkflowCanvas
+          nodes={updatedNodes}
+          edges={edges}
+          bottlenecks={bottlenecks}
+          onNodeClick={handleNodeClick}
+          selectedNodeId={selectedNode?.id || null}
+        />
+
+        {/* Node Detail Panel */}
+        {showNodePanel && selectedNode && (
+          <NodeDetailPanel
+            node={selectedNode}
+            bottleneck={selectedBottleneck}
+            recommendations={selectedRecommendations}
+            onClose={handleClosePanel}
+            executionId={executionId}
+            workflowName={workflowName || `Workflow ${workflowId.slice(0, 8)}`}
+          />
+        )}
       </div>
 
       {/* Playback Controls - Always visible at bottom */}

@@ -158,6 +158,10 @@ export default function ExecutionPage({ params }: ExecutionPageProps) {
           executionId={executionId}
           apiBaseUrl="http://localhost:8000"
           onBack={() => setActiveTab('overview')}
+          // Pass analysis data to avoid re-fetching
+          initialBottlenecks={analysisData?.bottlenecks?.bottlenecks}
+          initialRecommendations={analysisData?.recommendations?.recommendations}
+          workflowName={executionMeta.workflow_name}
         />
       ) : (
         <AppLayout>
