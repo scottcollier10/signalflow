@@ -18,6 +18,7 @@ class N8nExecutionParser:
     def __init__(self, execution_json: Dict[str, Any]):
         self.execution_json = execution_json
         self.workflow_data = execution_json.get("workflowData", {})
+        # Support both export format (data.resultData.runData) and API format (data.resultData.runData)
         self.run_data = execution_json.get("data", {}).get("resultData", {}).get("runData", {})
 
     def parse(self) -> NormalizedExecution:
@@ -25,7 +26,13 @@ class N8nExecutionParser:
 
         # Extract n8n IDs (not UUIDs)
         n8n_execution_id = str(self.execution_json.get("id", "unknown"))
-        n8n_workflow_id = str(self.workflow_data.get("id", "unknown"))
+        # Support both export format (workflowData.id) and API format (workflowId at top level)
+        n8n_workflow_id = str(
+            self.workflow_data.get("id") or
+            self.execution_json.get("workflowId") or
+            self.execution_json.get("workflowData", {}).get("id") or
+            "unknown"
+        )
 
         # Extract timing
         started_at = self._parse_timestamp(self.execution_json.get("startedAt"))

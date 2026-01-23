@@ -200,6 +200,17 @@ export default function AnalysisDashboard({
             onFilterChange={setFilters}
             onSortChange={setSortBy}
             onViewEvidence={handleViewEvidence}
+            exportData={{
+              workflowName: executionMeta?.workflow_id ? `Workflow ${executionMeta.workflow_id.slice(0, 8)}` : 'Unnamed Workflow',
+              workflowId: executionMeta?.workflow_id || '',
+              executionId: executionId,
+              durationMs: executionMeta?.duration_ms || analysisData.criticalPath.summary.total_duration_ms,
+              nodeCount: executionMeta?.node_count || analysisData.criticalPath.summary.node_count,
+              criticalPathNodes: analysisData.criticalPath.summary.node_count,
+              criticalPathDurationMs: analysisData.criticalPath.summary.total_duration_ms,
+              bottlenecks: analysisData.bottlenecks.bottlenecks,
+              errors: analysisData.errors.clusters,
+            }}
           />
         )}
       </div>

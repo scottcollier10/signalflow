@@ -45,10 +45,10 @@ export function AnalysisHeader({
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      {/* Back button */}
+      {/* Back button - now uses dynamic executionId */}
       <div className="mb-4">
         <a
-          href="/execution"
+          href={`/execution/${executionId}`}
           className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

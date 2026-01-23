@@ -16,7 +16,7 @@ interface PlaybackControlsProps {
 
 export function PlaybackControls({ state, controls, totalEvents }: PlaybackControlsProps) {
   return (
-    <div className="border-t bg-gray-50 p-4">
+    <div className="flex-shrink-0 border-t bg-white p-4 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
       <div className="flex items-center gap-4">
         {/* Play/Pause Button */}
         <button

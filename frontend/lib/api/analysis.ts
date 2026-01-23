@@ -299,13 +299,32 @@ export async function fetchErrorAnalysis(
     throw new Error('Invalid error analysis response');
   }
 
-  const { clusters, summary } = apiResponse.data;
+  const { clusters: rawClusters, summary } = apiResponse.data;
+
+  // Transform backend cluster format to frontend format
+  // Backend uses: id, member_count, pattern_type, representative_message, affected_nodes (objects)
+  // Frontend expects: cluster_id, error_count, pattern, sample_message, affected_nodes (strings)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const clusters: ErrorCluster[] = ((rawClusters || []) as any[]).map((cluster: Record<string, unknown>) => ({
+    cluster_id: (cluster.id || cluster.cluster_id || '') as string,
+    error_count: (cluster.member_count || cluster.error_count || 0) as number,
+    pattern: ((cluster.pattern_type || cluster.pattern || 'unknown') as string) as ErrorCluster['pattern'],
+    severity: ((cluster.severity || 'medium') as string) as ErrorCluster['severity'],
+    avg_similarity: (cluster.avg_similarity || 0) as number,
+    sample_message: (cluster.representative_message || cluster.sample_message || '') as string,
+    // Transform affected_nodes from objects to strings if needed
+    affected_nodes: Array.isArray(cluster.affected_nodes)
+      ? cluster.affected_nodes.map((n: unknown) =>
+          typeof n === 'string' ? n : (n as { node_id?: string })?.node_id || String(n)
+        )
+      : [],
+  }));
 
   return {
-    clusters: clusters || [],
+    clusters,
     summary: {
       total_errors: summary.total_errors,
-      total_clusters: clusters?.length || 0,
+      total_clusters: clusters.length,
       critical_count: summary.critical_patterns || 0,
     },
   };

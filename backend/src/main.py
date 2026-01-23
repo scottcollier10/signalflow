@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from src.config import settings
 from src.normalizer.parser import N8nExecutionParser
 from src.normalizer.storage import ExecutionStorage
@@ -11,6 +12,14 @@ from src.analysis.recommendations import RecommendationEngine
 from supabase import create_client
 from datetime import datetime
 import json
+import httpx
+
+
+class N8nFetchRequest(BaseModel):
+    """Request body for fetching execution from n8n API."""
+    n8n_url: str
+    execution_id: str
+    api_key: str
 
 app = FastAPI(
     title="SignalFlow API",
@@ -505,6 +514,449 @@ async def get_recommendations(workflow_id: str, execution_id: str):
     except Exception as e:
         print(f"Error generating recommendations: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# Data Retrieval Endpoints
+# =============================================================================
+
+@app.get("/api/executions")
+async def list_executions(limit: int = 100, status: str = None):
+    """
+    List all executions with optional filtering.
+
+    Args:
+        limit: Maximum number of executions to return (default 100)
+        status: Filter by status (success, error)
+
+    Returns:
+        List of execution records with workflow info
+    """
+    try:
+        supabase = create_client(settings.supabase_url, settings.supabase_key)
+
+        # Build query
+        query = supabase.table("executions")\
+            .select("id, workflow_id, n8n_execution_id, status, started_at, finished_at, duration_ms")\
+            .order("started_at", desc=True)\
+            .limit(limit)
+
+        if status:
+            query = query.eq("status", status)
+
+        result = query.execute()
+
+        executions = result.data or []
+
+        # Fetch workflow names for each unique workflow_id
+        workflow_ids = list(set(e["workflow_id"] for e in executions if e.get("workflow_id")))
+        workflow_map = {}
+
+        if workflow_ids:
+            workflows_result = supabase.table("workflows")\
+                .select("id, name")\
+                .in_("id", workflow_ids)\
+                .execute()
+
+            for w in (workflows_result.data or []):
+                workflow_map[w["id"]] = w
+
+        # Enrich executions with workflow info and counts
+        enriched = []
+        for exec in executions:
+            workflow = workflow_map.get(exec.get("workflow_id"), {})
+
+            # Count nodes from execution_events
+            events_result = supabase.table("execution_events")\
+                .select("node_id, status")\
+                .eq("execution_id", exec["id"])\
+                .execute()
+
+            events = events_result.data or []
+            unique_nodes = set(e["node_id"] for e in events)
+            error_count = sum(1 for e in events if e.get("status") == "error")
+
+            enriched.append({
+                **exec,
+                "workflow": workflow,
+                "node_count": len(unique_nodes),
+                "error_count": error_count,
+            })
+
+        return enriched
+
+    except Exception as e:
+        print(f"Error listing executions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/executions/{execution_id}")
+async def delete_execution(execution_id: str):
+    """
+    Delete an execution and all related data.
+
+    Deletes: execution_events, error_embeddings, node_stats, critical_paths, and the execution itself.
+    """
+    try:
+        supabase = create_client(settings.supabase_url, settings.supabase_key)
+
+        # Delete related data first (foreign key constraints)
+        supabase.table("execution_events").delete().eq("execution_id", execution_id).execute()
+        supabase.table("error_embeddings").delete().eq("execution_id", execution_id).execute()
+        supabase.table("node_stats").delete().eq("execution_id", execution_id).execute()
+        supabase.table("critical_paths").delete().eq("execution_id", execution_id).execute()
+
+        # Delete the execution
+        result = supabase.table("executions").delete().eq("id", execution_id).execute()
+
+        return {"success": True, "message": f"Execution {execution_id} deleted"}
+
+    except Exception as e:
+        print(f"Error deleting execution: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/executions/{execution_id}")
+async def get_execution(execution_id: str):
+    """
+    Get execution metadata by ID.
+
+    Returns execution record with workflow_id, status, duration, etc.
+    """
+    try:
+        supabase = create_client(settings.supabase_url, settings.supabase_key)
+        result = supabase.table("executions")\
+            .select("*")\
+            .eq("id", execution_id)\
+            .execute()
+
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Execution not found")
+
+        execution = result.data[0]
+
+        # Also fetch workflow info
+        workflow_result = supabase.table("workflows")\
+            .select("id, name, n8n_workflow_id")\
+            .eq("id", execution["workflow_id"])\
+            .execute()
+
+        workflow = workflow_result.data[0] if workflow_result.data else None
+
+        return {
+            "id": execution["id"],
+            "workflow_id": execution["workflow_id"],
+            "n8n_execution_id": execution.get("n8n_execution_id"),
+            "status": execution.get("status"),
+            "started_at": execution.get("started_at"),
+            "finished_at": execution.get("finished_at"),
+            "duration_ms": execution.get("duration_ms"),
+            "trigger_mode": execution.get("trigger_mode"),
+            "workflow": workflow
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error fetching execution: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/executions/{execution_id}/full")
+async def get_execution_full(execution_id: str):
+    """
+    Get full execution data including raw JSON.
+
+    Use this for detailed inspection of the execution.
+    """
+    try:
+        supabase = create_client(settings.supabase_url, settings.supabase_key)
+        result = supabase.table("executions")\
+            .select("*")\
+            .eq("id", execution_id)\
+            .execute()
+
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Execution not found")
+
+        return result.data[0]
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/workflows/{workflow_id}/info")
+async def get_workflow_info(workflow_id: str):
+    """
+    Get workflow metadata by ID.
+
+    Returns workflow record with name, node count, etc.
+    Note: /api/workflows/{workflow_id} already exists for graph data,
+    so this uses /info suffix for metadata only.
+    """
+    try:
+        supabase = create_client(settings.supabase_url, settings.supabase_key)
+        result = supabase.table("workflows")\
+            .select("id, name, n8n_workflow_id, node_count, edge_count, created_at")\
+            .eq("id", workflow_id)\
+            .execute()
+
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Workflow not found")
+
+        return result.data[0]
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/workflows/{workflow_id}/executions")
+async def get_workflow_executions(workflow_id: str, limit: int = 50):
+    """
+    List all executions for a workflow.
+
+    Returns array of execution summaries, ordered by most recent first.
+    """
+    try:
+        supabase = create_client(settings.supabase_url, settings.supabase_key)
+
+        # Verify workflow exists
+        workflow_result = supabase.table("workflows")\
+            .select("id, name")\
+            .eq("id", workflow_id)\
+            .execute()
+
+        if not workflow_result.data:
+            raise HTTPException(status_code=404, detail="Workflow not found")
+
+        # Get executions
+        result = supabase.table("executions")\
+            .select("id, n8n_execution_id, status, started_at, finished_at, duration_ms, trigger_mode")\
+            .eq("workflow_id", workflow_id)\
+            .order("started_at", desc=True)\
+            .limit(limit)\
+            .execute()
+
+        return {
+            "workflow": workflow_result.data[0],
+            "executions": result.data or [],
+            "count": len(result.data) if result.data else 0
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/workflows/by-execution/{execution_id}")
+async def get_workflow_by_execution(execution_id: str):
+    """
+    Get workflow info for a given execution.
+
+    Useful when you only have the execution ID and need the workflow context.
+    """
+    try:
+        supabase = create_client(settings.supabase_url, settings.supabase_key)
+
+        # Get execution with workflow_id
+        exec_result = supabase.table("executions")\
+            .select("id, workflow_id, n8n_execution_id, status, duration_ms")\
+            .eq("id", execution_id)\
+            .execute()
+
+        if not exec_result.data:
+            raise HTTPException(status_code=404, detail="Execution not found")
+
+        execution = exec_result.data[0]
+
+        # Get workflow
+        workflow_result = supabase.table("workflows")\
+            .select("*")\
+            .eq("id", execution["workflow_id"])\
+            .execute()
+
+        if not workflow_result.data:
+            raise HTTPException(status_code=404, detail="Workflow not found")
+
+        workflow = workflow_result.data[0]
+
+        return {
+            "execution": execution,
+            "workflow": {
+                "id": workflow["id"],
+                "name": workflow["name"],
+                "n8n_workflow_id": workflow.get("n8n_workflow_id"),
+                "node_count": workflow.get("node_count"),
+                "edge_count": workflow.get("edge_count")
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/n8n/fetch-execution")
+async def fetch_n8n_execution(request: N8nFetchRequest):
+    """
+    Proxy endpoint to fetch execution from n8n API and import it.
+
+    This avoids CORS issues when the frontend tries to call n8n directly.
+
+    Request body:
+    {
+        "n8n_url": "https://your-n8n-instance.com",
+        "execution_id": "12345",
+        "api_key": "n8n_api_xxx"
+    }
+
+    Returns:
+    {
+        "success": true,
+        "execution_id": "uuid-from-database",
+        "workflow_id": "uuid-from-database",
+        "analysis_url": "/execution/{id}/analysis"
+    }
+    """
+    try:
+        # Normalize the URL
+        base_url = request.n8n_url.rstrip('/')
+        if not base_url.startswith(('http://', 'https://')):
+            base_url = f'https://{base_url}'
+
+        # Build the n8n API URL with includeData=true to get full execution data
+        n8n_api_url = f"{base_url}/api/v1/executions/{request.execution_id}?includeData=true"
+
+        # Fetch from n8n API
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(
+                n8n_api_url,
+                headers={
+                    "X-N8N-API-KEY": request.api_key,
+                    "Accept": "application/json"
+                }
+            )
+
+        # Handle n8n API errors
+        if response.status_code == 401:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid n8n API key. Check your credentials."
+            )
+        elif response.status_code == 403:
+            raise HTTPException(
+                status_code=403,
+                detail="API key doesn't have permission to access this execution."
+            )
+        elif response.status_code == 404:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Execution {request.execution_id} not found in n8n."
+            )
+        elif response.status_code != 200:
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=f"n8n API error: {response.text}"
+            )
+
+        # Parse the n8n response
+        execution_json = response.json()
+
+        # Debug: log the response structure
+        print(f"[n8n-fetch] Response keys: {list(execution_json.keys())}")
+        print(f"[n8n-fetch] Has 'data' key: {'data' in execution_json}")
+        print(f"[n8n-fetch] Has 'workflowId': {execution_json.get('workflowId')}")
+        print(f"[n8n-fetch] Has 'workflowData': {'workflowData' in execution_json}")
+
+        # The n8n API v1 returns the execution object directly
+        # Some responses might be wrapped in { "data": execution }
+        if "data" in execution_json and isinstance(execution_json["data"], dict):
+            # Check if this is a wrapper or the actual execution data
+            if "resultData" in execution_json["data"]:
+                # This is the actual execution data (data.resultData.runData)
+                execution_data = execution_json
+            else:
+                # This is a wrapper, unwrap it
+                execution_data = execution_json["data"]
+        else:
+            execution_data = execution_json
+
+        print(f"[n8n-fetch] Execution data keys: {list(execution_data.keys())}")
+        print(f"[n8n-fetch] Workflow ID: {execution_data.get('workflowId')}")
+
+        # Parse and normalize using our existing parser
+        parser = N8nExecutionParser(execution_data)
+        normalized = parser.parse()
+
+        print(f"[n8n-fetch] Parsed n8n_workflow_id: {normalized.n8n_workflow_id}")
+        print(f"[n8n-fetch] Parsed n8n_execution_id: {normalized.n8n_execution_id}")
+        print(f"[n8n-fetch] Parsed event count: {len(normalized.events)}")
+        print(f"[n8n-fetch] Parsed status: {normalized.status}")
+
+        # Store in database
+        storage = ExecutionStorage()
+        execution_uuid = await storage.store_execution(normalized)
+
+        print(f"[n8n-fetch] Stored execution UUID: {execution_uuid}")
+
+        if not execution_uuid:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to store execution in database"
+            )
+
+        # Get the workflow ID from storage (the actual UUID, not n8n ID)
+        # We need to query it since the storage doesn't return it
+        workflow_uuid = None
+        try:
+            supabase = create_client(settings.supabase_url, settings.supabase_key)
+            exec_result = supabase.table("executions").select("workflow_id").eq("id", execution_uuid).execute()
+            if exec_result.data:
+                workflow_uuid = exec_result.data[0]["workflow_id"]
+        except Exception as e:
+            print(f"[n8n-fetch] Error getting workflow UUID: {e}")
+
+        return {
+            "success": True,
+            "execution_id": execution_uuid,
+            "workflow_id": workflow_uuid,
+            "n8n_workflow_id": normalized.n8n_workflow_id,
+            "n8n_execution_id": normalized.n8n_execution_id,
+            "status": normalized.status,
+            "event_count": len(normalized.events),
+            "duration_ms": normalized.duration_ms,
+            "analysis_url": f"/execution/{execution_uuid}/analysis"
+        }
+
+    except HTTPException:
+        raise
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=504,
+            detail="Timeout connecting to n8n API. Check if the URL is correct."
+        )
+    except httpx.RequestError as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to connect to n8n: {str(e)}"
+        )
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=502,
+            detail="Invalid JSON response from n8n API"
+        )
+    except Exception as e:
+        print(f"Error fetching from n8n: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error processing execution: {str(e)}"
+        )
 
 
 # TODO: Add endpoints for:

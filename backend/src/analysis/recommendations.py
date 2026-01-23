@@ -1,12 +1,12 @@
 """
-Recommendation Engine with 15 Detection Rules
+Recommendation Engine with 40 Detection Rules
 
 This module analyzes workflow executions to generate evidence-backed optimization
 recommendations based on critical path, bottleneck, and error cluster data.
 
-The 15 Detection Rules:
+The 40 Detection Rules:
 
-Performance Rules (1-7):
+PERFORMANCE RULES (1-22):
 1. Sequential API Calls → Parallelize
 2. Long Node Duration → Optimize Algorithm
 3. High Loop Iteration → Batch Processing
@@ -14,8 +14,14 @@ Performance Rules (1-7):
 5. Synchronous Waits → Use Webhooks
 6. Large Data Transfers → Compress/Stream
 7. Hardcoded Delays → Remove/Justify
+17. Critical Path Heavy Node → Optimize bottleneck
+18. High Latency External Service → Add caching
+19. Database Query Slow → Optimize query
+20. Redundant API Calls → Batch requests
+21. Heavy Computation in Loop → Vectorize
+22. Inefficient Data Filtering → Server-side filter
 
-Reliability Rules (8-15):
+RELIABILITY RULES (8-16, 23-30):
 8. Repeated Timeouts → Increase Timeout
 9. Auth Failures → Fix Credentials
 10. Rate Limits → Add Backoff/Queuing
@@ -24,6 +30,25 @@ Reliability Rules (8-15):
 13. Resource Errors → Scale Infrastructure
 14. High Error Rate on Node → Investigate Root Cause
 15. Error Cluster Across Nodes → Systemic Issue
+16. Any Execution Error → Investigate and Fix
+23. No Retry Logic → Add retry with backoff
+24. Missing Timeout Config → Add timeout
+25. Single Point of Failure → Add fallback
+26. No Rate Limit Handling → Handle 429 responses
+
+COST OPTIMIZATION RULES (31-35):
+31. Expensive API in Loop → Batch to reduce costs
+32. Redundant Storage Operations → Consolidate
+33. Unnecessary Full Scans → Add filtering
+34. Heavy Compute in Sync Flow → Use async
+35. Storage Without Cleanup → Add cleanup
+
+BOTTLENECK-BASED RULES (36-40):
+36. Severe Bottleneck → Immediate optimization
+37. High Bottleneck → Optimization recommended
+38. Multiple Medium Bottlenecks → Review workflow
+39. Critical Path Bottleneck → Priority optimization
+40. High Variance Node → Stabilize performance
 
 Priority Score Formula: (impact_score / effort_multiplier) * 100
 - Impact score: 0-1 (based on time_saved or error_count)
@@ -140,7 +165,7 @@ class RecommendationEngine:
         self.execution_id = execution_id
         self.workflow_id = workflow_id
 
-        # Phase 2: Apply all 15 rules
+        # Phase 2: Apply all 40 rules
         recommendations = []
 
         # Performance rules (1-7)
@@ -152,7 +177,7 @@ class RecommendationEngine:
         recommendations.extend(await self._apply_rule_6_large_transfers())
         recommendations.extend(await self._apply_rule_7_hardcoded_delays())
 
-        # Reliability rules (8-15)
+        # Reliability rules (8-16)
         recommendations.extend(await self._apply_rule_8_timeouts())
         recommendations.extend(await self._apply_rule_9_auth_failures())
         recommendations.extend(await self._apply_rule_10_rate_limits())
@@ -161,6 +186,35 @@ class RecommendationEngine:
         recommendations.extend(await self._apply_rule_13_resource_errors())
         recommendations.extend(await self._apply_rule_14_high_error_rate())
         recommendations.extend(await self._apply_rule_15_error_clusters())
+        recommendations.extend(await self._apply_rule_16_any_errors())
+
+        # New Performance rules (17-22)
+        recommendations.extend(await self._apply_rule_17_critical_path_heavy_node())
+        recommendations.extend(await self._apply_rule_18_high_latency_service())
+        recommendations.extend(await self._apply_rule_19_slow_database())
+        recommendations.extend(await self._apply_rule_20_redundant_api_calls())
+        recommendations.extend(await self._apply_rule_21_heavy_computation_loop())
+        recommendations.extend(await self._apply_rule_22_inefficient_filtering())
+
+        # New Reliability rules (23-26)
+        recommendations.extend(await self._apply_rule_23_no_retry_logic())
+        recommendations.extend(await self._apply_rule_24_missing_timeout())
+        recommendations.extend(await self._apply_rule_25_single_point_failure())
+        recommendations.extend(await self._apply_rule_26_no_rate_limit_handling())
+
+        # Cost optimization rules (31-35)
+        recommendations.extend(await self._apply_rule_31_expensive_api_loop())
+        recommendations.extend(await self._apply_rule_32_redundant_storage())
+        recommendations.extend(await self._apply_rule_33_unnecessary_full_scans())
+        recommendations.extend(await self._apply_rule_34_heavy_compute_sync())
+        recommendations.extend(await self._apply_rule_35_storage_no_cleanup())
+
+        # Bottleneck-based rules (36-40)
+        recommendations.extend(await self._apply_rule_36_severe_bottleneck())
+        recommendations.extend(await self._apply_rule_37_high_bottleneck())
+        recommendations.extend(await self._apply_rule_38_multiple_medium_bottlenecks())
+        recommendations.extend(await self._apply_rule_39_critical_path_bottleneck())
+        recommendations.extend(await self._apply_rule_40_high_variance_node())
 
         # Phase 3: Calculate priority scores and sort
         for rec in recommendations:
@@ -224,26 +278,66 @@ class RecommendationEngine:
             return []
 
     async def _load_error_analysis(self, execution_id: str) -> Optional[Dict]:
-        """Load error clustering results"""
+        """Load error clustering results and execution errors"""
         try:
-            # Load error clusters
-            clusters_response = self.db.table('error_clusters') \
-                .select('*') \
-                .eq('execution_id', execution_id) \
+            # First get workflow_id for this execution
+            exec_response = self.db.table('executions') \
+                .select('workflow_id') \
+                .eq('id', execution_id) \
                 .execute()
 
-            # Load individual error embeddings
+            workflow_id = None
+            if exec_response.data:
+                workflow_id = exec_response.data[0].get('workflow_id')
+
+            # Load error clusters by workflow_id (clusters are stored by workflow)
+            clusters = []
+            if workflow_id:
+                clusters_response = self.db.table('error_clusters') \
+                    .select('*') \
+                    .eq('workflow_id', workflow_id) \
+                    .execute()
+                clusters = clusters_response.data if clusters_response.data else []
+
+            # Load individual error embeddings for this execution
             embeddings_response = self.db.table('error_embeddings') \
                 .select('*') \
                 .eq('execution_id', execution_id) \
                 .execute()
 
+            errors_from_embeddings = embeddings_response.data if embeddings_response.data else []
+
+            # Also load errors directly from execution_events table
+            # This catches errors even if embedding generation failed
+            events_response = self.db.table('execution_events') \
+                .select('id, node_id, error_message, timestamp, status') \
+                .eq('execution_id', execution_id) \
+                .eq('status', 'error') \
+                .execute()
+
+            errors_from_events = events_response.data if events_response.data else []
+
+            # Merge errors - prefer embeddings data but include all errors
+            all_errors = errors_from_embeddings.copy()
+            existing_event_ids = {e.get('event_id') for e in errors_from_embeddings}
+
+            for event in errors_from_events:
+                if event.get('id') not in existing_event_ids:
+                    all_errors.append({
+                        'event_id': event.get('id'),
+                        'node_id': event.get('node_id'),
+                        'error_message': event.get('error_message'),
+                        'timestamp': event.get('timestamp')
+                    })
+
             return {
-                'clusters': clusters_response.data if clusters_response.data else [],
-                'errors': embeddings_response.data if embeddings_response.data else []
+                'clusters': clusters,
+                'errors': all_errors
             }
         except Exception as e:
             print(f"Error loading error analysis: {e}")
+            import traceback
+            traceback.print_exc()
             return {'clusters': [], 'errors': []}
 
     async def _load_execution_data(self, execution_id: str, workflow_id: str) -> Dict:
@@ -1262,6 +1356,1049 @@ function validateInput(data) {
                     category=RecommendationCategory.RELIABILITY,
                     affected_node_ids=affected_nodes,
                     error_count=error_count
+                ))
+
+        return recommendations
+
+    async def _apply_rule_16_any_errors(self) -> List[Recommendation]:
+        """
+        Rule #16: Any Execution Error → Investigate and Fix
+
+        Detects: Any error in execution (catches single errors)
+        Trigger: Execution has at least 1 error
+        Impact: MEDIUM for single error, HIGH for multiple
+
+        This is a catch-all rule to ensure executions with errors
+        always generate at least one recommendation.
+        """
+        recommendations = []
+
+        if not self.error_analysis or not self.error_analysis.get('errors'):
+            return recommendations
+
+        errors = self.error_analysis['errors']
+        error_count = len(errors)
+
+        if error_count == 0:
+            return recommendations
+
+        # Group errors by node
+        errors_by_node = {}
+        for error in errors:
+            node_id = error.get('node_id', 'unknown')
+            if node_id not in errors_by_node:
+                errors_by_node[node_id] = []
+            errors_by_node[node_id].append(error)
+
+        # Create one recommendation per failed node
+        for node_id, node_errors in errors_by_node.items():
+            node_error_count = len(node_errors)
+            sample_error = node_errors[0]
+            error_message = sample_error.get('error_message', 'Unknown error')
+
+            # Truncate long error messages
+            if len(error_message) > 200:
+                error_message = error_message[:200] + '...'
+
+            evidence = [
+                Evidence(
+                    type="execution_error",
+                    description=f"Node failed with error: {error_message[:100]}",
+                    data={
+                        'error_count': node_error_count,
+                        'error_message': error_message,
+                        'node_id': node_id
+                    },
+                    link=f"/execution/{self.execution_id}/analysis?tab=errors"
+                )
+            ]
+
+            # Determine impact based on error count
+            if node_error_count >= 5:
+                impact = ImpactLevel.HIGH
+            elif node_error_count >= 2:
+                impact = ImpactLevel.MEDIUM
+            else:
+                impact = ImpactLevel.MEDIUM
+
+            recommendations.append(Recommendation(
+                id=str(uuid.uuid4()),
+                rule_id=16,
+                title=f"Execution Error: Node Failed",
+                description=f"Node '{node_id}' encountered an error during execution. Review the error message and fix the underlying issue.",
+                evidence=evidence,
+                impact=impact,
+                impact_details=f"Execution failed with {node_error_count} error(s) - workflow did not complete successfully",
+                effort=EffortLevel.MEDIUM,
+                priority_score=0.0,
+                category=RecommendationCategory.RELIABILITY,
+                affected_node_ids=[node_id],
+                error_count=node_error_count
+            ))
+
+        return recommendations
+
+    # =========================================================================
+    # NEW PERFORMANCE RULES (17-22)
+    # =========================================================================
+
+    async def _apply_rule_17_critical_path_heavy_node(self) -> List[Recommendation]:
+        """
+        Rule #17: Critical Path Heavy Node → Optimize Bottleneck
+
+        Trigger: Node on critical path taking >10% of total workflow time
+        """
+        recommendations = []
+
+        if not self.critical_path or not self.bottlenecks or not self.execution_data:
+            return recommendations
+
+        execution = self.execution_data.get('execution')
+        total_duration = execution.get('duration_ms', 0) if execution else 0
+
+        if total_duration == 0:
+            return recommendations
+
+        for bottleneck in self.bottlenecks:
+            if not bottleneck.get('on_critical_path'):
+                continue
+
+            duration_ms = bottleneck.get('duration_ms', 0)
+            percentage = (duration_ms / total_duration) * 100
+
+            if percentage > 10:
+                evidence = [
+                    Evidence(
+                        type="critical_path",
+                        description=f"Node accounts for {percentage:.1f}% of total execution time",
+                        data={'percentage': percentage, 'duration_ms': duration_ms},
+                        link=f"/execution/{self.execution_id}?tab=critical-path"
+                    )
+                ]
+
+                impact = ImpactLevel.HIGH if percentage > 25 else ImpactLevel.MEDIUM
+
+                recommendations.append(Recommendation(
+                    id=str(uuid.uuid4()),
+                    rule_id=17,
+                    title=f"Optimize Critical Path Node: {bottleneck['node_name']}",
+                    description=f"This node accounts for {percentage:.1f}% of total workflow time. Focus optimization efforts here for maximum impact.",
+                    evidence=evidence,
+                    impact=impact,
+                    impact_details=f"Reducing this node's time directly reduces workflow duration",
+                    effort=EffortLevel.MEDIUM,
+                    priority_score=0.0,
+                    category=RecommendationCategory.PERFORMANCE,
+                    affected_node_ids=[bottleneck['node_id']],
+                    time_saved_ms=int(duration_ms * 0.3)
+                ))
+
+        return recommendations
+
+    async def _apply_rule_18_high_latency_service(self) -> List[Recommendation]:
+        """
+        Rule #18: High Latency External Service → Add Caching
+
+        Trigger: HTTP node with consistent >2s response time
+        """
+        recommendations = []
+
+        if not self.bottlenecks:
+            return recommendations
+
+        http_types = ['httpRequest', 'http', 'webhook', 'api']
+
+        for bottleneck in self.bottlenecks:
+            node_type = bottleneck.get('node_type', '').lower()
+            duration_ms = bottleneck.get('duration_ms', 0)
+
+            if any(t in node_type for t in http_types) and duration_ms > 2000:
+                evidence = [
+                    Evidence(
+                        type="bottleneck",
+                        description=f"External service response time: {duration_ms/1000:.1f}s",
+                        data={'duration_ms': duration_ms, 'avg_response_time': duration_ms},
+                        link=f"/execution/{self.execution_id}?tab=bottlenecks"
+                    )
+                ]
+
+                recommendations.append(Recommendation(
+                    id=str(uuid.uuid4()),
+                    rule_id=18,
+                    title=f"Add Caching for Slow Service: {bottleneck['node_name']}",
+                    description=f"External service has {duration_ms/1000:.1f}s latency. Consider response caching or async processing.",
+                    evidence=evidence,
+                    impact=ImpactLevel.MEDIUM,
+                    impact_details=f"Caching could eliminate {duration_ms/1000:.1f}s on repeated calls",
+                    effort=EffortLevel.MEDIUM,
+                    priority_score=0.0,
+                    category=RecommendationCategory.PERFORMANCE,
+                    affected_node_ids=[bottleneck['node_id']],
+                    time_saved_ms=duration_ms
+                ))
+
+        return recommendations
+
+    async def _apply_rule_19_slow_database(self) -> List[Recommendation]:
+        """
+        Rule #19: Database Query Slow → Optimize Query
+
+        Trigger: Database node >1s execution
+        """
+        recommendations = []
+
+        if not self.bottlenecks:
+            return recommendations
+
+        db_keywords = ['database', 'mysql', 'postgres', 'mongodb', 'redis', 'sql', 'query']
+
+        for bottleneck in self.bottlenecks:
+            node_name = bottleneck.get('node_name', '').lower()
+            node_type = bottleneck.get('node_type', '').lower()
+            duration_ms = bottleneck.get('duration_ms', 0)
+
+            is_db_node = any(kw in node_name or kw in node_type for kw in db_keywords)
+
+            if is_db_node and duration_ms > 1000:
+                evidence = [
+                    Evidence(
+                        type="bottleneck",
+                        description=f"Database query taking {duration_ms/1000:.1f}s",
+                        data={'duration_ms': duration_ms},
+                        link=f"/execution/{self.execution_id}?tab=bottlenecks"
+                    )
+                ]
+
+                recommendations.append(Recommendation(
+                    id=str(uuid.uuid4()),
+                    rule_id=19,
+                    title=f"Optimize Database Query: {bottleneck['node_name']}",
+                    description=f"Database query takes {duration_ms/1000:.1f}s. Consider adding indexes, optimizing query, or implementing pagination.",
+                    evidence=evidence,
+                    impact=ImpactLevel.HIGH if duration_ms > 5000 else ImpactLevel.MEDIUM,
+                    impact_details=f"Query optimization could reduce time significantly",
+                    effort=EffortLevel.MEDIUM,
+                    priority_score=0.0,
+                    category=RecommendationCategory.PERFORMANCE,
+                    affected_node_ids=[bottleneck['node_id']],
+                    time_saved_ms=int(duration_ms * 0.5)
+                ))
+
+        return recommendations
+
+    async def _apply_rule_20_redundant_api_calls(self) -> List[Recommendation]:
+        """
+        Rule #20: Redundant API Calls → Batch Requests
+
+        Trigger: Same HTTP endpoint called multiple times
+        """
+        recommendations = []
+
+        if not self.execution_data:
+            return recommendations
+
+        events = self.execution_data.get('events', [])
+
+        # Group HTTP events by node type
+        http_events = [e for e in events if 'http' in e.get('node_type', '').lower()]
+
+        # Count by node_id
+        node_counts = {}
+        for event in http_events:
+            node_id = event.get('node_id')
+            if node_id:
+                node_counts[node_id] = node_counts.get(node_id, 0) + 1
+
+        for node_id, count in node_counts.items():
+            if count > 2:
+                evidence = [
+                    Evidence(
+                        type="pattern",
+                        description=f"API endpoint called {count} times in single execution",
+                        data={'call_count': count, 'node_id': node_id},
+                        link=f"/execution/{self.execution_id}?tab=bottlenecks"
+                    )
+                ]
+
+                recommendations.append(Recommendation(
+                    id=str(uuid.uuid4()),
+                    rule_id=20,
+                    title="Batch Redundant API Calls",
+                    description=f"Same API called {count} times. Consider batching requests or implementing caching.",
+                    evidence=evidence,
+                    impact=ImpactLevel.MEDIUM,
+                    impact_details=f"Batching could reduce {count-1} redundant calls",
+                    effort=EffortLevel.MEDIUM,
+                    priority_score=0.0,
+                    category=RecommendationCategory.PERFORMANCE,
+                    affected_node_ids=[node_id]
+                ))
+
+        return recommendations
+
+    async def _apply_rule_21_heavy_computation_loop(self) -> List[Recommendation]:
+        """
+        Rule #21: Heavy Computation in Loop → Vectorize
+
+        Trigger: Code/Function node with high execution count
+        """
+        recommendations = []
+
+        if not self.bottlenecks:
+            return recommendations
+
+        code_keywords = ['code', 'function', 'script', 'execute']
+
+        for bottleneck in self.bottlenecks:
+            node_name = bottleneck.get('node_name', '').lower()
+            node_type = bottleneck.get('node_type', '').lower()
+            exec_count = bottleneck.get('execution_count', 1)
+            duration_ms = bottleneck.get('duration_ms', 0)
+
+            is_code_node = any(kw in node_name or kw in node_type for kw in code_keywords)
+
+            if is_code_node and exec_count > 10 and duration_ms > 500:
+                total_time = duration_ms * exec_count
+
+                evidence = [
+                    Evidence(
+                        type="pattern",
+                        description=f"Code executed {exec_count} times, {total_time/1000:.1f}s total",
+                        data={'execution_count': exec_count, 'total_time_ms': total_time},
+                        link=f"/execution/{self.execution_id}?tab=bottlenecks"
+                    )
+                ]
+
+                recommendations.append(Recommendation(
+                    id=str(uuid.uuid4()),
+                    rule_id=21,
+                    title=f"Optimize Loop Computation: {bottleneck['node_name']}",
+                    description=f"Code runs {exec_count} times. Consider vectorizing operations or moving computation outside the loop.",
+                    evidence=evidence,
+                    impact=ImpactLevel.HIGH if total_time > 10000 else ImpactLevel.MEDIUM,
+                    impact_details=f"Vectorization could reduce {total_time/1000:.1f}s execution time",
+                    effort=EffortLevel.MEDIUM,
+                    priority_score=0.0,
+                    category=RecommendationCategory.PERFORMANCE,
+                    affected_node_ids=[bottleneck['node_id']],
+                    time_saved_ms=int(total_time * 0.5)
+                ))
+
+        return recommendations
+
+    async def _apply_rule_22_inefficient_filtering(self) -> List[Recommendation]:
+        """
+        Rule #22: Inefficient Data Filtering → Server-Side Filter
+
+        Trigger: Filter/IF node after large data fetch
+        """
+        recommendations = []
+
+        if not self.bottlenecks:
+            return recommendations
+
+        filter_keywords = ['filter', 'if', 'switch', 'condition']
+        data_keywords = ['http', 'database', 'query', 'fetch', 'get']
+
+        # Find filter nodes that follow data nodes
+        for i, bottleneck in enumerate(self.bottlenecks):
+            node_name = bottleneck.get('node_name', '').lower()
+
+            is_filter = any(kw in node_name for kw in filter_keywords)
+
+            if is_filter and i > 0:
+                prev_node = self.bottlenecks[i-1]
+                prev_name = prev_node.get('node_name', '').lower()
+                prev_type = prev_node.get('node_type', '').lower()
+
+                is_data_fetch = any(kw in prev_name or kw in prev_type for kw in data_keywords)
+
+                if is_data_fetch and prev_node.get('duration_ms', 0) > 2000:
+                    evidence = [
+                        Evidence(
+                            type="pattern",
+                            description=f"Filtering after {prev_node.get('duration_ms', 0)/1000:.1f}s data fetch",
+                            data={'fetch_duration': prev_node.get('duration_ms')},
+                            link=f"/execution/{self.execution_id}?tab=bottlenecks"
+                        )
+                    ]
+
+                    recommendations.append(Recommendation(
+                        id=str(uuid.uuid4()),
+                        rule_id=22,
+                        title="Use Server-Side Filtering",
+                        description="Filtering data after full fetch. Move filter logic to the data source to reduce transfer time.",
+                        evidence=evidence,
+                        impact=ImpactLevel.MEDIUM,
+                        impact_details="Server-side filtering reduces data transfer",
+                        effort=EffortLevel.MEDIUM,
+                        priority_score=0.0,
+                        category=RecommendationCategory.PERFORMANCE,
+                        affected_node_ids=[bottleneck['node_id'], prev_node['node_id']]
+                    ))
+
+        return recommendations
+
+    # =========================================================================
+    # NEW RELIABILITY RULES (23-26)
+    # =========================================================================
+
+    async def _apply_rule_23_no_retry_logic(self) -> List[Recommendation]:
+        """
+        Rule #23: No Retry Logic → Add Retry with Backoff
+
+        Trigger: HTTP node that failed without retry
+        """
+        recommendations = []
+
+        if not self.error_analysis or not self.bottlenecks:
+            return recommendations
+
+        errors = self.error_analysis.get('errors', [])
+        failed_nodes = set(e.get('node_id') for e in errors)
+
+        http_types = ['http', 'webhook', 'api']
+
+        for bottleneck in self.bottlenecks:
+            node_id = bottleneck.get('node_id')
+            node_type = bottleneck.get('node_type', '').lower()
+
+            is_http = any(t in node_type for t in http_types)
+
+            if is_http and node_id in failed_nodes:
+                evidence = [
+                    Evidence(
+                        type="reliability",
+                        description="HTTP node failed without automatic retry",
+                        data={'node_id': node_id},
+                        link=f"/execution/{self.execution_id}?tab=errors"
+                    )
+                ]
+
+                code_example = """
+// Add retry configuration
+{
+  "retry": {
+    "enabled": true,
+    "maxRetries": 3,
+    "backoff": "exponential"
+  }
+}
+                """.strip()
+
+                recommendations.append(Recommendation(
+                    id=str(uuid.uuid4()),
+                    rule_id=23,
+                    title=f"Add Retry Logic: {bottleneck['node_name']}",
+                    description="External API call failed without retry. Add exponential backoff to handle transient failures.",
+                    evidence=evidence,
+                    impact=ImpactLevel.HIGH,
+                    impact_details="Retry logic prevents workflow failures from transient issues",
+                    effort=EffortLevel.LOW,
+                    priority_score=0.0,
+                    category=RecommendationCategory.RELIABILITY,
+                    code_example=code_example,
+                    affected_node_ids=[node_id]
+                ))
+
+        return recommendations
+
+    async def _apply_rule_24_missing_timeout(self) -> List[Recommendation]:
+        """
+        Rule #24: Missing Timeout Config → Add Timeout
+
+        Trigger: Long-running HTTP/DB node without explicit timeout
+        """
+        recommendations = []
+
+        if not self.bottlenecks:
+            return recommendations
+
+        slow_threshold = 30000  # 30 seconds
+
+        for bottleneck in self.bottlenecks:
+            duration_ms = bottleneck.get('duration_ms', 0)
+            node_type = bottleneck.get('node_type', '').lower()
+
+            is_external = any(t in node_type for t in ['http', 'database', 'api'])
+
+            if is_external and duration_ms > slow_threshold:
+                evidence = [
+                    Evidence(
+                        type="reliability",
+                        description=f"Node ran for {duration_ms/1000:.1f}s without timeout protection",
+                        data={'duration_ms': duration_ms},
+                        link=f"/execution/{self.execution_id}?tab=bottlenecks"
+                    )
+                ]
+
+                recommendations.append(Recommendation(
+                    id=str(uuid.uuid4()),
+                    rule_id=24,
+                    title=f"Add Timeout: {bottleneck['node_name']}",
+                    description=f"Operation ran for {duration_ms/1000:.1f}s. Add timeout to prevent workflow hangs.",
+                    evidence=evidence,
+                    impact=ImpactLevel.MEDIUM,
+                    impact_details="Timeout prevents indefinite waits",
+                    effort=EffortLevel.LOW,
+                    priority_score=0.0,
+                    category=RecommendationCategory.RELIABILITY,
+                    affected_node_ids=[bottleneck['node_id']]
+                ))
+
+        return recommendations
+
+    async def _apply_rule_25_single_point_failure(self) -> List[Recommendation]:
+        """
+        Rule #25: Single Point of Failure → Add Fallback
+
+        Trigger: Critical path has single route without error handling
+        """
+        recommendations = []
+
+        if not self.critical_path or not self.error_analysis:
+            return recommendations
+
+        errors = self.error_analysis.get('errors', [])
+
+        if errors:
+            critical_nodes = self.critical_path.get('path_nodes', [])
+            failed_critical = [e for e in errors if e.get('node_id') in critical_nodes]
+
+            if failed_critical:
+                evidence = [
+                    Evidence(
+                        type="reliability",
+                        description=f"Critical path node failed with no fallback: {len(failed_critical)} errors",
+                        data={'error_count': len(failed_critical)},
+                        link=f"/execution/{self.execution_id}?tab=critical-path"
+                    )
+                ]
+
+                recommendations.append(Recommendation(
+                    id=str(uuid.uuid4()),
+                    rule_id=25,
+                    title="Add Fallback for Critical Path",
+                    description="Critical path failed with no alternative route. Add error handling branches or fallback logic.",
+                    evidence=evidence,
+                    impact=ImpactLevel.HIGH,
+                    impact_details="Fallback prevents complete workflow failure",
+                    effort=EffortLevel.HIGH,
+                    priority_score=0.0,
+                    category=RecommendationCategory.RELIABILITY,
+                    affected_node_ids=[e.get('node_id') for e in failed_critical]
+                ))
+
+        return recommendations
+
+    async def _apply_rule_26_no_rate_limit_handling(self) -> List[Recommendation]:
+        """
+        Rule #26: No Rate Limit Handling → Handle 429 Responses
+
+        Trigger: High-frequency API calls without rate limit handling
+        """
+        recommendations = []
+
+        if not self.bottlenecks:
+            return recommendations
+
+        for bottleneck in self.bottlenecks:
+            exec_count = bottleneck.get('execution_count', 1)
+            node_type = bottleneck.get('node_type', '').lower()
+
+            is_api = 'http' in node_type or 'api' in node_type
+
+            if is_api and exec_count > 10:
+                evidence = [
+                    Evidence(
+                        type="reliability",
+                        description=f"API called {exec_count} times - risk of rate limiting",
+                        data={'call_count': exec_count},
+                        link=f"/execution/{self.execution_id}?tab=bottlenecks"
+                    )
+                ]
+
+                recommendations.append(Recommendation(
+                    id=str(uuid.uuid4()),
+                    rule_id=26,
+                    title=f"Add Rate Limit Handling: {bottleneck['node_name']}",
+                    description=f"API called {exec_count} times. Add rate limit handling to avoid 429 errors.",
+                    evidence=evidence,
+                    impact=ImpactLevel.MEDIUM,
+                    impact_details="Prevents failures from API rate limiting",
+                    effort=EffortLevel.MEDIUM,
+                    priority_score=0.0,
+                    category=RecommendationCategory.RELIABILITY,
+                    affected_node_ids=[bottleneck['node_id']]
+                ))
+
+        return recommendations
+
+    # =========================================================================
+    # COST OPTIMIZATION RULES (31-35)
+    # =========================================================================
+
+    async def _apply_rule_31_expensive_api_loop(self) -> List[Recommendation]:
+        """
+        Rule #31: Expensive API in Loop → Batch to Reduce Costs
+
+        Trigger: Paid API called in loop (high execution count)
+        """
+        recommendations = []
+
+        if not self.bottlenecks:
+            return recommendations
+
+        # Common paid API indicators
+        paid_apis = ['openai', 'gpt', 'claude', 'anthropic', 'langchain', 'agent',
+                     'twilio', 'sendgrid', 'stripe', 'aws', 'google-cloud']
+
+        for bottleneck in self.bottlenecks:
+            node_name = bottleneck.get('node_name', '').lower()
+            node_type = bottleneck.get('node_type', '').lower()
+            exec_count = bottleneck.get('execution_count', 1)
+
+            is_paid = any(api in node_name or api in node_type for api in paid_apis)
+
+            if is_paid and exec_count > 5:
+                evidence = [
+                    Evidence(
+                        type="cost",
+                        description=f"Paid API called {exec_count} times in loop",
+                        data={'call_count': exec_count},
+                        link=f"/execution/{self.execution_id}?tab=bottlenecks"
+                    )
+                ]
+
+                recommendations.append(Recommendation(
+                    id=str(uuid.uuid4()),
+                    rule_id=31,
+                    title=f"Batch Paid API Calls: {bottleneck['node_name']}",
+                    description=f"Paid API called {exec_count} times. Consider batching to reduce API costs.",
+                    evidence=evidence,
+                    impact=ImpactLevel.MEDIUM,
+                    impact_details=f"Batching could reduce costs by {(exec_count-1)/exec_count*100:.0f}%",
+                    effort=EffortLevel.MEDIUM,
+                    priority_score=0.0,
+                    category=RecommendationCategory.COST,
+                    affected_node_ids=[bottleneck['node_id']]
+                ))
+
+        return recommendations
+
+    async def _apply_rule_32_redundant_storage(self) -> List[Recommendation]:
+        """
+        Rule #32: Redundant Storage Operations → Consolidate
+
+        Trigger: Multiple writes to storage in single execution
+        """
+        recommendations = []
+
+        if not self.execution_data:
+            return recommendations
+
+        events = self.execution_data.get('events', [])
+
+        storage_keywords = ['write', 'save', 'store', 'put', 'upload', 's3', 'storage']
+
+        storage_events = [e for e in events
+                         if any(kw in e.get('node_name', '').lower() for kw in storage_keywords)]
+
+        if len(storage_events) > 2:
+            evidence = [
+                Evidence(
+                    type="cost",
+                    description=f"Found {len(storage_events)} storage write operations",
+                    data={'write_count': len(storage_events)},
+                    link=f"/execution/{self.execution_id}?tab=overview"
+                )
+            ]
+
+            recommendations.append(Recommendation(
+                id=str(uuid.uuid4()),
+                rule_id=32,
+                title="Consolidate Storage Operations",
+                description=f"Multiple storage writes ({len(storage_events)}) detected. Consider consolidating to reduce costs.",
+                evidence=evidence,
+                impact=ImpactLevel.LOW,
+                impact_details="Fewer storage operations = lower costs",
+                effort=EffortLevel.MEDIUM,
+                priority_score=0.0,
+                category=RecommendationCategory.COST,
+                affected_node_ids=[e.get('node_id') for e in storage_events]
+            ))
+
+        return recommendations
+
+    async def _apply_rule_33_unnecessary_full_scans(self) -> List[Recommendation]:
+        """
+        Rule #33: Unnecessary Full Scans → Add Filtering
+
+        Trigger: Database query with high duration and "all" or "list" in name
+        """
+        recommendations = []
+
+        if not self.bottlenecks:
+            return recommendations
+
+        scan_keywords = ['all', 'list', 'fetch', 'get all', 'find all', 'select *']
+
+        for bottleneck in self.bottlenecks:
+            node_name = bottleneck.get('node_name', '').lower()
+            duration_ms = bottleneck.get('duration_ms', 0)
+
+            is_scan = any(kw in node_name for kw in scan_keywords)
+
+            if is_scan and duration_ms > 3000:
+                evidence = [
+                    Evidence(
+                        type="cost",
+                        description=f"Full scan taking {duration_ms/1000:.1f}s",
+                        data={'duration_ms': duration_ms},
+                        link=f"/execution/{self.execution_id}?tab=bottlenecks"
+                    )
+                ]
+
+                recommendations.append(Recommendation(
+                    id=str(uuid.uuid4()),
+                    rule_id=33,
+                    title=f"Add Filtering: {bottleneck['node_name']}",
+                    description="Full data scan detected. Add filtering or pagination to reduce data processed.",
+                    evidence=evidence,
+                    impact=ImpactLevel.MEDIUM,
+                    impact_details="Filtering reduces compute and transfer costs",
+                    effort=EffortLevel.LOW,
+                    priority_score=0.0,
+                    category=RecommendationCategory.COST,
+                    affected_node_ids=[bottleneck['node_id']]
+                ))
+
+        return recommendations
+
+    async def _apply_rule_34_heavy_compute_sync(self) -> List[Recommendation]:
+        """
+        Rule #34: Heavy Compute in Sync Flow → Use Async
+
+        Trigger: Heavy computation blocking workflow (>10s)
+        """
+        recommendations = []
+
+        if not self.bottlenecks:
+            return recommendations
+
+        compute_keywords = ['process', 'compute', 'calculate', 'transform', 'aggregate']
+
+        for bottleneck in self.bottlenecks:
+            node_name = bottleneck.get('node_name', '').lower()
+            duration_ms = bottleneck.get('duration_ms', 0)
+
+            is_compute = any(kw in node_name for kw in compute_keywords)
+
+            if is_compute and duration_ms > 10000:
+                evidence = [
+                    Evidence(
+                        type="cost",
+                        description=f"Heavy computation: {duration_ms/1000:.1f}s blocking",
+                        data={'duration_ms': duration_ms},
+                        link=f"/execution/{self.execution_id}?tab=bottlenecks"
+                    )
+                ]
+
+                recommendations.append(Recommendation(
+                    id=str(uuid.uuid4()),
+                    rule_id=34,
+                    title=f"Use Async Processing: {bottleneck['node_name']}",
+                    description=f"Heavy computation ({duration_ms/1000:.1f}s). Consider async job queue for better resource utilization.",
+                    evidence=evidence,
+                    impact=ImpactLevel.MEDIUM,
+                    impact_details="Async processing improves resource efficiency",
+                    effort=EffortLevel.HIGH,
+                    priority_score=0.0,
+                    category=RecommendationCategory.COST,
+                    affected_node_ids=[bottleneck['node_id']]
+                ))
+
+        return recommendations
+
+    async def _apply_rule_35_storage_no_cleanup(self) -> List[Recommendation]:
+        """
+        Rule #35: Storage Without Cleanup → Add Cleanup
+
+        Trigger: Storage write without corresponding delete/cleanup
+        """
+        recommendations = []
+
+        if not self.execution_data:
+            return recommendations
+
+        events = self.execution_data.get('events', [])
+        nodes = self.execution_data.get('nodes', [])
+
+        write_keywords = ['write', 'save', 'store', 'put', 'upload', 'create']
+        cleanup_keywords = ['delete', 'remove', 'clean', 'purge', 'expire']
+
+        has_writes = any(any(kw in e.get('node_name', '').lower() for kw in write_keywords) for e in events)
+        has_cleanup = any(any(kw in n.get('name', '').lower() for kw in cleanup_keywords) for n in nodes)
+
+        if has_writes and not has_cleanup:
+            evidence = [
+                Evidence(
+                    type="cost",
+                    description="Storage writes detected without cleanup logic",
+                    data={'has_cleanup': False},
+                    link=f"/execution/{self.execution_id}?tab=overview"
+                )
+            ]
+
+            recommendations.append(Recommendation(
+                id=str(uuid.uuid4()),
+                rule_id=35,
+                title="Add Storage Cleanup Logic",
+                description="Storage writes detected without cleanup. Add expiration or cleanup to prevent cost accumulation.",
+                evidence=evidence,
+                impact=ImpactLevel.LOW,
+                impact_details="Cleanup prevents storage cost accumulation",
+                effort=EffortLevel.LOW,
+                priority_score=0.0,
+                category=RecommendationCategory.COST
+            ))
+
+        return recommendations
+
+    # =========================================================================
+    # BOTTLENECK-BASED RULES (36-40)
+    # =========================================================================
+
+    async def _apply_rule_36_severe_bottleneck(self) -> List[Recommendation]:
+        """
+        Rule #36: Severe Bottleneck → Immediate Optimization
+
+        Trigger: Bottleneck score >= 90
+        """
+        recommendations = []
+
+        if not self.bottlenecks:
+            return recommendations
+
+        for bottleneck in self.bottlenecks:
+            score = bottleneck.get('bottleneck_score', 0)
+
+            if score >= 90:
+                duration_ms = bottleneck.get('duration_ms', 0)
+
+                evidence = [
+                    Evidence(
+                        type="bottleneck",
+                        description=f"Severe bottleneck score: {score}/100",
+                        data={
+                            'score': score,
+                            'duration_ms': duration_ms,
+                            'severity': 'SEVERE'
+                        },
+                        link=f"/execution/{self.execution_id}?tab=bottlenecks"
+                    )
+                ]
+
+                recommendations.append(Recommendation(
+                    id=str(uuid.uuid4()),
+                    rule_id=36,
+                    title=f"SEVERE: Optimize {bottleneck['node_name']}",
+                    description=f"Critical bottleneck (score: {score}/100). This node requires immediate optimization attention.",
+                    evidence=evidence,
+                    impact=ImpactLevel.CRITICAL,
+                    impact_details=f"Severe impact on workflow performance ({duration_ms/1000:.1f}s)",
+                    effort=EffortLevel.MEDIUM,
+                    priority_score=0.0,
+                    category=RecommendationCategory.PERFORMANCE,
+                    affected_node_ids=[bottleneck['node_id']],
+                    time_saved_ms=int(duration_ms * 0.5)
+                ))
+
+        return recommendations
+
+    async def _apply_rule_37_high_bottleneck(self) -> List[Recommendation]:
+        """
+        Rule #37: High Bottleneck → Optimization Recommended
+
+        Trigger: Bottleneck score 70-89
+        """
+        recommendations = []
+
+        if not self.bottlenecks:
+            return recommendations
+
+        for bottleneck in self.bottlenecks:
+            score = bottleneck.get('bottleneck_score', 0)
+
+            if 70 <= score < 90:
+                duration_ms = bottleneck.get('duration_ms', 0)
+
+                evidence = [
+                    Evidence(
+                        type="bottleneck",
+                        description=f"High bottleneck score: {score}/100",
+                        data={
+                            'score': score,
+                            'duration_ms': duration_ms,
+                            'severity': 'HIGH'
+                        },
+                        link=f"/execution/{self.execution_id}?tab=bottlenecks"
+                    )
+                ]
+
+                recommendations.append(Recommendation(
+                    id=str(uuid.uuid4()),
+                    rule_id=37,
+                    title=f"HIGH: Optimize {bottleneck['node_name']}",
+                    description=f"High bottleneck score ({score}/100). Should be optimized soon for better performance.",
+                    evidence=evidence,
+                    impact=ImpactLevel.HIGH,
+                    impact_details=f"High impact on workflow ({duration_ms/1000:.1f}s)",
+                    effort=EffortLevel.MEDIUM,
+                    priority_score=0.0,
+                    category=RecommendationCategory.PERFORMANCE,
+                    affected_node_ids=[bottleneck['node_id']],
+                    time_saved_ms=int(duration_ms * 0.3)
+                ))
+
+        return recommendations
+
+    async def _apply_rule_38_multiple_medium_bottlenecks(self) -> List[Recommendation]:
+        """
+        Rule #38: Multiple Medium Bottlenecks → Review Workflow
+
+        Trigger: 3+ bottlenecks with score 50-69
+        """
+        recommendations = []
+
+        if not self.bottlenecks:
+            return recommendations
+
+        medium_bottlenecks = [b for b in self.bottlenecks
+                             if 50 <= b.get('bottleneck_score', 0) < 70]
+
+        if len(medium_bottlenecks) >= 3:
+            total_time = sum(b.get('duration_ms', 0) for b in medium_bottlenecks)
+
+            evidence = [
+                Evidence(
+                    type="bottleneck",
+                    description=f"{len(medium_bottlenecks)} medium bottlenecks detected",
+                    data={
+                        'count': len(medium_bottlenecks),
+                        'total_time_ms': total_time,
+                        'nodes': [b['node_name'] for b in medium_bottlenecks[:5]]
+                    },
+                    link=f"/execution/{self.execution_id}?tab=bottlenecks"
+                )
+            ]
+
+            recommendations.append(Recommendation(
+                id=str(uuid.uuid4()),
+                rule_id=38,
+                title="Review Workflow Architecture",
+                description=f"Found {len(medium_bottlenecks)} medium bottlenecks. Consider reviewing overall workflow design.",
+                evidence=evidence,
+                impact=ImpactLevel.MEDIUM,
+                impact_details=f"Combined impact: {total_time/1000:.1f}s",
+                effort=EffortLevel.HIGH,
+                priority_score=0.0,
+                category=RecommendationCategory.PERFORMANCE,
+                affected_node_ids=[b['node_id'] for b in medium_bottlenecks],
+                time_saved_ms=int(total_time * 0.2)
+            ))
+
+        return recommendations
+
+    async def _apply_rule_39_critical_path_bottleneck(self) -> List[Recommendation]:
+        """
+        Rule #39: Critical Path Bottleneck → Priority Optimization
+
+        Trigger: Bottleneck on critical path with score > 50
+        """
+        recommendations = []
+
+        if not self.bottlenecks or not self.critical_path:
+            return recommendations
+
+        for bottleneck in self.bottlenecks:
+            score = bottleneck.get('bottleneck_score', 0)
+            on_critical = bottleneck.get('on_critical_path', False)
+
+            if on_critical and score > 50:
+                duration_ms = bottleneck.get('duration_ms', 0)
+
+                evidence = [
+                    Evidence(
+                        type="critical_path",
+                        description=f"Critical path bottleneck (score: {score}/100)",
+                        data={
+                            'score': score,
+                            'on_critical_path': True,
+                            'duration_ms': duration_ms
+                        },
+                        link=f"/execution/{self.execution_id}?tab=critical-path"
+                    )
+                ]
+
+                recommendations.append(Recommendation(
+                    id=str(uuid.uuid4()),
+                    rule_id=39,
+                    title=f"Priority: {bottleneck['node_name']} (Critical Path)",
+                    description=f"Bottleneck on critical path. Optimizing this directly reduces workflow time.",
+                    evidence=evidence,
+                    impact=ImpactLevel.HIGH,
+                    impact_details=f"Direct workflow time reduction: {duration_ms/1000:.1f}s potential",
+                    effort=EffortLevel.MEDIUM,
+                    priority_score=0.0,
+                    category=RecommendationCategory.PERFORMANCE,
+                    affected_node_ids=[bottleneck['node_id']],
+                    time_saved_ms=int(duration_ms * 0.4)
+                ))
+
+        return recommendations
+
+    async def _apply_rule_40_high_variance_node(self) -> List[Recommendation]:
+        """
+        Rule #40: High Variance Node → Stabilize Performance
+
+        Trigger: Node with high variance factor
+        """
+        recommendations = []
+
+        if not self.bottlenecks:
+            return recommendations
+
+        for bottleneck in self.bottlenecks:
+            variance = bottleneck.get('variance_factor', 0)
+
+            if variance > 0.7:  # High variance
+                duration_ms = bottleneck.get('duration_ms', 0)
+
+                evidence = [
+                    Evidence(
+                        type="bottleneck",
+                        description=f"High performance variance: {variance:.2f}",
+                        data={
+                            'variance_factor': variance,
+                            'duration_ms': duration_ms
+                        },
+                        link=f"/execution/{self.execution_id}?tab=bottlenecks"
+                    )
+                ]
+
+                recommendations.append(Recommendation(
+                    id=str(uuid.uuid4()),
+                    rule_id=40,
+                    title=f"Stabilize: {bottleneck['node_name']}",
+                    description=f"Node has unpredictable performance (variance: {variance:.2f}). Investigate causes and stabilize.",
+                    evidence=evidence,
+                    impact=ImpactLevel.MEDIUM,
+                    impact_details="Consistent performance improves predictability",
+                    effort=EffortLevel.MEDIUM,
+                    priority_score=0.0,
+                    category=RecommendationCategory.PERFORMANCE,
+                    affected_node_ids=[bottleneck['node_id']]
                 ))
 
         return recommendations

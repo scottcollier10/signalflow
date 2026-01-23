@@ -16,12 +16,14 @@ interface ExecutionVisualizerProps {
   workflowId: string;
   executionId: string;
   apiBaseUrl?: string;
+  onBack?: () => void;
 }
 
 export function ExecutionVisualizer({
   workflowId,
   executionId,
-  apiBaseUrl = 'http://localhost:8000'
+  apiBaseUrl = 'http://localhost:8000',
+  onBack,
 }: ExecutionVisualizerProps) {
   const [data, setData] = useState<ExecutionData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -139,12 +141,24 @@ export function ExecutionVisualizer({
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b px-6 py-4 shadow-sm">
+      <header className="flex-shrink-0 bg-white border-b px-6 py-4 shadow-sm">
         <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">
-              Execution Playback
-            </h1>
+          <div className="flex items-center gap-4">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="p-2 -ml-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="Go back"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            )}
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">
+                Execution Playback
+              </h1>
             <div className="mt-1 flex items-center gap-4 text-sm text-gray-600">
               <span className="flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -183,33 +197,51 @@ export function ExecutionVisualizer({
                   {(data.duration_ms / 1000).toFixed(2)}s
                 </span>
               )}
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {onBack ? (
+              <button
+                onClick={onBack}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Back to Analysis
+              </button>
+            ) : (
+              <a
+                href={`/execution/${executionId}`}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                View Analysis
+              </a>
+            )}
             <a
-              href={`/execution/${executionId}/analysis`}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium"
+              href="/dashboard"
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 text-sm font-medium"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
-              View Analysis
+              Dashboard
             </a>
-            <div className="text-xs text-gray-500">
-              <div>Workflow ID: {workflowId}</div>
-              <div>Execution ID: {executionId}</div>
-            </div>
           </div>
         </div>
       </header>
 
       {/* Canvas */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden">
         <WorkflowCanvas nodes={updatedNodes} edges={edges} />
       </div>
 
-      {/* Playback Controls */}
+      {/* Playback Controls - Always visible at bottom */}
       <PlaybackControls
         state={playbackState}
         controls={controls}
