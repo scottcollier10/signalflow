@@ -21,6 +21,7 @@ import {
 import { Filters, SortOption } from './AnalysisDashboard';
 import { FilterControls } from './FilterControls';
 import { generateClaudeCodePrompt, generatePromptSummary, PromptGeneratorInput } from '@/lib/promptGenerator';
+import { sanitizeWorkflowJSON } from '@/lib/workflowSanitizer';
 
 type ViewMode = 'list' | 'grouped';
 
@@ -89,6 +90,7 @@ export function RecommendationsView({
   );
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
+  const [workflowJSONLoading, setWorkflowJSONLoading] = useState(false);
 
   // Check if export data is available (prop passed from parent)
   // Validates that we have the minimum required data for export
@@ -156,6 +158,68 @@ export function RecommendationsView({
     setTimeout(() => setCopySuccess(null), 3000);
     setExportDropdownOpen(false);
   }, [exportData, recommendations, isExportReady]);
+
+  const handleDownloadWorkflowJSON = useCallback(async () => {
+    if (!exportData?.workflowId) {
+      setCopySuccess('Workflow ID not available');
+      setTimeout(() => setCopySuccess(null), 3000);
+      return;
+    }
+
+    try {
+      setWorkflowJSONLoading(true);
+
+      // Fetch workflow JSON from API
+      const response = await fetch(
+        `http://localhost:8000/api/workflows/${exportData.workflowId}/raw-json`
+      );
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          setCopySuccess('Workflow JSON not available');
+        } else {
+          setCopySuccess('Failed to fetch workflow JSON');
+        }
+        setTimeout(() => setCopySuccess(null), 3000);
+        return;
+      }
+
+      const result = await response.json();
+      const workflowData = result.data?.workflow;
+
+      if (!workflowData) {
+        setCopySuccess('Workflow JSON not available');
+        setTimeout(() => setCopySuccess(null), 3000);
+        return;
+      }
+
+      // Sanitize before download
+      const sanitized = sanitizeWorkflowJSON(workflowData);
+
+      // Download
+      const blob = new Blob([JSON.stringify(sanitized, null, 2)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `workflow-${exportData.workflowId.slice(0, 8)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setCopySuccess('Workflow JSON downloaded! Attach to Claude Code session');
+      setTimeout(() => setCopySuccess(null), 4000);
+      setExportDropdownOpen(false);
+    } catch (error) {
+      console.error('Download failed:', error);
+      setCopySuccess('Failed to download workflow JSON');
+      setTimeout(() => setCopySuccess(null), 3000);
+    } finally {
+      setWorkflowJSONLoading(false);
+    }
+  }, [exportData]);
 
   // Handle case when there are no recommendations at all
   if (!recommendations || recommendations.length === 0) {
@@ -384,8 +448,27 @@ export function RecommendationsView({
                   )}
                 </div>
 
+                {/* Workflow JSON Download */}
+                <div className="p-2 border-t border-gray-200">
+                  <button
+                    onClick={handleDownloadWorkflowJSON}
+                    disabled={workflowJSONLoading || !exportData?.workflowId}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-left text-sm rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <span className="text-lg">📦</span>
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-700">
+                        {workflowJSONLoading ? 'Downloading...' : 'Download Workflow JSON'}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Attach to Claude Code for context
+                      </div>
+                    </div>
+                  </button>
+                </div>
+
                 {/* Other Export Options */}
-                <div className="p-2">
+                <div className="p-2 border-t border-gray-100">
                   <button
                     disabled
                     className="w-full flex items-center gap-3 px-3 py-2 text-left text-sm text-gray-400 rounded-lg cursor-not-allowed"

@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import { X, Copy, Check, AlertTriangle, Clock, Zap, TrendingUp, CheckCircle } from 'lucide-react';
+import { X, Copy, Check, AlertTriangle, Clock, Zap, TrendingUp, CheckCircle, FileJson } from 'lucide-react';
 import { Bottleneck, Recommendation, formatDuration } from '@/lib/api/analysis';
 import { generateNodeFixPrompt } from '@/lib/nodePromptGenerator';
 
@@ -36,6 +36,7 @@ export function NodeDetailPanel({
   workflowName
 }: NodeDetailPanelProps) {
   const [copied, setCopied] = useState(false);
+  const [configCopied, setConfigCopied] = useState(false);
 
   const handleCopyPrompt = async () => {
     const prompt = generateNodeFixPrompt({
@@ -52,6 +53,34 @@ export function NodeDetailPanel({
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy prompt:', err);
+    }
+  };
+
+  const handleCopyNodeConfig = async () => {
+    // Build node configuration object with available data
+    const config = {
+      id: node.id,
+      name: node.data?.label,
+      type: node.data?.nodeType,
+      duration_ms: node.data?.duration,
+      state: node.data?.state,
+      // Include bottleneck info if available
+      ...(bottleneck && {
+        bottleneck: {
+          score: bottleneck.bottleneck_score,
+          severity: bottleneck.severity,
+          on_critical_path: bottleneck.is_on_critical_path,
+          factors: bottleneck.factors
+        }
+      })
+    };
+
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(config, null, 2));
+      setConfigCopied(true);
+      setTimeout(() => setConfigCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy config:', err);
     }
   };
 
@@ -232,9 +261,10 @@ export function NodeDetailPanel({
         )}
       </div>
 
-      {/* Footer - Copy Prompt Button */}
-      {bottleneck && (
-        <div className="p-4 border-t bg-gray-50">
+      {/* Footer - Action Buttons */}
+      <div className="p-4 border-t bg-gray-50 space-y-2">
+        {/* Primary: Copy Fix Prompt (only for bottleneck nodes) */}
+        {bottleneck && (
           <button
             onClick={handleCopyPrompt}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
@@ -251,11 +281,32 @@ export function NodeDetailPanel({
               </>
             )}
           </button>
-          <p className="text-xs text-gray-500 text-center mt-2">
-            Generates a targeted prompt to optimize this specific node
-          </p>
-        </div>
-      )}
+        )}
+
+        {/* Secondary: Copy Node Config */}
+        <button
+          onClick={handleCopyNodeConfig}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-lg text-sm transition-colors"
+        >
+          {configCopied ? (
+            <>
+              <Check className="w-4 h-4" />
+              Copied!
+            </>
+          ) : (
+            <>
+              <FileJson className="w-4 h-4" />
+              Copy Node Configuration
+            </>
+          )}
+        </button>
+
+        <p className="text-xs text-gray-500 text-center">
+          {bottleneck
+            ? 'Generate a targeted prompt or copy node config for Claude Code'
+            : 'Copy node configuration to share with Claude Code'}
+        </p>
+      </div>
     </div>
   );
 }

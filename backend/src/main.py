@@ -171,6 +171,46 @@ async def get_workflow_graph(workflow_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/workflows/{workflow_id}/raw-json")
+async def get_workflow_raw_json(workflow_id: str):
+    """
+    Get raw workflow JSON for export/download.
+    Returns the original n8n workflow definition.
+    """
+    try:
+        supabase = create_client(settings.supabase_url, settings.supabase_key)
+
+        response = supabase.table("workflows")\
+            .select("id, name, n8n_workflow_id, raw_json")\
+            .eq("id", workflow_id)\
+            .limit(1)\
+            .execute()
+
+        if not response.data or len(response.data) == 0:
+            raise HTTPException(status_code=404, detail="Workflow not found")
+
+        workflow = response.data[0]
+        raw_json = workflow.get("raw_json", {})
+
+        if not raw_json:
+            raise HTTPException(status_code=404, detail="Workflow JSON not available")
+
+        return {
+            "success": True,
+            "data": {
+                "workflow_id": workflow["id"],
+                "name": workflow.get("name"),
+                "n8n_workflow_id": workflow.get("n8n_workflow_id"),
+                "workflow": raw_json
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/workflows/{workflow_id}/executions/{execution_id}")
 async def get_execution_graph(workflow_id: str, execution_id: str):
     """
