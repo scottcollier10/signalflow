@@ -77,7 +77,7 @@ export default function ExecutionPage({ params }: ExecutionPageProps) {
 
         // Fetch execution metadata
         const execResponse = await fetch(
-          `http://localhost:8000/api/executions/${executionId}`
+          `http://localhost:8001/api/executions/${executionId}`
         );
 
         if (!execResponse.ok) {
@@ -97,7 +97,7 @@ export default function ExecutionPage({ params }: ExecutionPageProps) {
 
         // Fetch analysis data
         const analysis = await fetchAnalysisData(
-          'http://localhost:8000',
+          'http://localhost:8001',
           execData.workflow_id,
           executionId
         );
@@ -156,7 +156,7 @@ export default function ExecutionPage({ params }: ExecutionPageProps) {
         <ExecutionVisualizer
           workflowId={executionMeta.workflow_id}
           executionId={executionId}
-          apiBaseUrl="http://localhost:8000"
+          apiBaseUrl="http://localhost:8001"
           onBack={() => setActiveTab('overview')}
           // Pass analysis data to avoid re-fetching
           initialBottlenecks={analysisData?.bottlenecks?.bottlenecks}

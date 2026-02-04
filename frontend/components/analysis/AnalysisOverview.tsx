@@ -9,6 +9,7 @@ import { useState } from 'react';
 import {
   AnalysisData,
   Recommendation,
+  OptimizationVerdict,
   formatDuration,
   getSeverityColors,
   getImpactColors,
@@ -23,6 +24,9 @@ export function AnalysisOverview({ data, onViewEvidence }: AnalysisOverviewProps
   const { criticalPath, bottlenecks, errors, recommendations } = data;
   const [showScoringLegend, setShowScoringLegend] = useState(false);
 
+  // Get optimization verdict
+  const verdict = bottlenecks.verdict;
+
   // Get top severity bottlenecks
   const severeBottlenecks = bottlenecks.bottlenecks.filter(b => b.severity === 'severe' || b.severity === 'high');
 
@@ -31,6 +35,40 @@ export function AnalysisOverview({ data, onViewEvidence }: AnalysisOverviewProps
 
   return (
     <div className="space-y-6">
+      {/* Optimization Verdict Banner */}
+      {verdict && (
+        <div className={`rounded-lg border-2 p-4 ${
+          verdict.color === 'green'
+            ? 'border-green-300 bg-green-50'
+            : verdict.color === 'yellow'
+            ? 'border-yellow-300 bg-yellow-50'
+            : 'border-red-300 bg-red-50'
+        }`}>
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">
+              {verdict.color === 'green' ? '\u2705' : verdict.color === 'yellow' ? '\u26A0\uFE0F' : '\u{1F534}'}
+            </span>
+            <div>
+              <h3 className={`font-semibold text-lg ${
+                verdict.color === 'green' ? 'text-green-800' :
+                verdict.color === 'yellow' ? 'text-yellow-800' : 'text-red-800'
+              }`}>
+                {verdict.status === 'well_optimized' ? 'Well Optimized' :
+                 verdict.status === 'minor_improvements' ? 'Minor Improvements Available' :
+                 verdict.status === 'needs_optimization' ? 'Optimization Recommended' :
+                 'Critical Optimization Needed'}
+              </h3>
+              <p className={`text-sm ${
+                verdict.color === 'green' ? 'text-green-700' :
+                verdict.color === 'yellow' ? 'text-yellow-700' : 'text-red-700'
+              }`}>
+                {verdict.message}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Executive Summary */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">

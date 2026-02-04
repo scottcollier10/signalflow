@@ -171,7 +171,7 @@ export function RecommendationsView({
 
       // Fetch workflow JSON from API
       const response = await fetch(
-        `http://localhost:8000/api/workflows/${exportData.workflowId}/raw-json`
+        `http://localhost:8001/api/workflows/${exportData.workflowId}/raw-json`
       );
 
       if (!response.ok) {

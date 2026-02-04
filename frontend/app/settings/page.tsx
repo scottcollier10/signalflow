@@ -58,7 +58,7 @@ export default function SettingsPage() {
 
   const fetchDataStats = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/executions');
+      const res = await fetch('http://localhost:8001/api/executions');
       if (res.ok) {
         const data = await res.json();
         const count = Array.isArray(data) ? data.length : (data.executions?.length || 0);
@@ -98,7 +98,7 @@ export default function SettingsPage() {
     setConnectionMessage('Testing connection...');
 
     try {
-      const res = await fetch('http://localhost:8000/api/n8n/test-connection', {
+      const res = await fetch('http://localhost:8001/api/n8n/test-connection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: n8nUrl, apiKey: n8nApiKey })
@@ -135,7 +135,7 @@ export default function SettingsPage() {
     }
 
     try {
-      const res = await fetch('http://localhost:8000/api/executions/all', { method: 'DELETE' });
+      const res = await fetch('http://localhost:8001/api/executions/all', { method: 'DELETE' });
       if (res.ok) {
         const result = await res.json();
         alert(`Deleted ${result.deleted_count || 0} executions successfully`);

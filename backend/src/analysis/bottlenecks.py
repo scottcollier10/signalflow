@@ -116,7 +116,8 @@ class BottleneckAnalyzer:
                 duration_factor,
                 position_factor,
                 frequency_factor,
-                variance_factor
+                variance_factor,
+                duration_ms=node_data['duration_ms']
             )
 
             severity = self._get_severity_level(score)
@@ -392,7 +393,8 @@ class BottleneckAnalyzer:
         duration_factor: float,
         position_factor: float,
         frequency_factor: float,
-        variance_factor: float
+        variance_factor: float,
+        duration_ms: int = 0
     ) -> int:
         """
         Combine all factors with weights to produce final score 0-100
@@ -402,6 +404,15 @@ class BottleneckAnalyzer:
         - Position: 30% (critical path location)
         - Frequency: 20% (loop/retry multiplier)
         - Variance: 10% (consistency penalty)
+
+        CALIBRATION RULES (applied AFTER weighted calculation):
+        - Nodes < 10ms: capped at 39 (Low max) regardless of other factors
+        - Nodes < 100ms: capped at 49 (Medium max)
+        - Nodes < 500ms: capped at 69 (High max)
+        - Nodes >= 500ms: no cap, use calculated score
+
+        This prevents fast nodes from getting inflated scores due to
+        relative percentile ranking in already-optimized workflows.
 
         Returns:
             Integer score 0-100
@@ -415,6 +426,16 @@ class BottleneckAnalyzer:
 
         # Scale to 0-100
         score = int(weighted_score * 100)
+
+        # TIER 1: Absolute duration caps
+        # Fast nodes should never score as severe/high bottlenecks
+        if duration_ms < 10:
+            score = min(score, 39)   # Cap at Low
+        elif duration_ms < 100:
+            score = min(score, 49)   # Cap at Medium max
+        elif duration_ms < 500:
+            score = min(score, 69)   # Cap at High max
+        # Nodes >= 500ms: no cap, use calculated score
 
         # Ensure bounds
         return max(0, min(100, score))
@@ -499,4 +520,70 @@ class BottleneckAnalyzer:
             'medium_bottlenecks': severity_counts['medium'],
             'low_bottlenecks': severity_counts['low'],
             'top_bottleneck_impact_percentage': round(top_bottleneck_impact, 1)
+        }
+
+    def get_optimization_verdict(self, bottlenecks: List[BottleneckScore], total_duration_ms: int) -> Dict:
+        """
+        Generate an optimization verdict based on bottleneck analysis.
+
+        Returns a verdict with status, message, and supporting data
+        to help users understand if further optimization is needed.
+
+        Verdict levels:
+        - "well_optimized": No severe/high bottlenecks, total < 5s
+        - "minor_improvements": Only medium bottlenecks, reasonable total time
+        - "needs_optimization": Has high/severe bottlenecks
+        - "critical": Multiple severe bottlenecks or very slow execution
+
+        Args:
+            bottlenecks: List of all bottleneck scores
+            total_duration_ms: Total execution duration in milliseconds
+
+        Returns:
+            Dictionary with verdict status, message, color, and stats
+        """
+        severe_count = sum(1 for b in bottlenecks if b.severity == "severe")
+        high_count = sum(1 for b in bottlenecks if b.severity == "high")
+        medium_count = sum(1 for b in bottlenecks if b.severity == "medium")
+
+        total_seconds = total_duration_ms / 1000
+
+        # Determine verdict
+        if severe_count > 0:
+            if severe_count >= 2:
+                verdict_status = "critical"
+                verdict_message = f"Critical: {severe_count} severe bottlenecks detected. Immediate optimization recommended."
+                verdict_color = "red"
+            else:
+                verdict_status = "needs_optimization"
+                verdict_message = "1 severe bottleneck found. Focus optimization on the top-ranked node."
+                verdict_color = "red"
+        elif high_count > 0:
+            verdict_status = "needs_optimization"
+            verdict_message = f"{high_count} high-impact bottleneck{'s' if high_count > 1 else ''} found. Optimization recommended."
+            verdict_color = "yellow"
+        elif medium_count > 3:
+            verdict_status = "minor_improvements"
+            verdict_message = "Several medium bottlenecks detected. Consider reviewing workflow architecture."
+            verdict_color = "yellow"
+        elif total_seconds <= 5:
+            verdict_status = "well_optimized"
+            verdict_message = "This workflow is well-optimized. No critical bottlenecks detected."
+            verdict_color = "green"
+        else:
+            verdict_status = "minor_improvements"
+            verdict_message = "Workflow performance is acceptable. Minor improvements possible."
+            verdict_color = "green"
+
+        return {
+            "status": verdict_status,
+            "message": verdict_message,
+            "color": verdict_color,
+            "stats": {
+                "total_duration_s": round(total_seconds, 2),
+                "severe_count": severe_count,
+                "high_count": high_count,
+                "medium_count": medium_count,
+                "high_impact_count": severe_count + high_count
+            }
         }

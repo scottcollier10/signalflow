@@ -46,7 +46,7 @@ interface ExecutionMetadata {
 
 export default function AnalysisDashboard({
   executionId,
-  apiBaseUrl = 'http://localhost:8000',
+  apiBaseUrl = 'http://localhost:8001',
 }: AnalysisDashboardProps) {
   // Data state
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);

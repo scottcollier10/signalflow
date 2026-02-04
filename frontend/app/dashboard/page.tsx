@@ -36,7 +36,7 @@ export default function DashboardPage() {
       setError(null);
 
       // Fetch all executions
-      const response = await fetch('http://localhost:8000/api/executions');
+      const response = await fetch('http://localhost:8001/api/executions');
 
       if (!response.ok) {
         throw new Error('Failed to fetch executions');
@@ -87,7 +87,7 @@ export default function DashboardPage() {
     }
 
     try {
-      const response = await fetch(`http://localhost:8000/api/executions/${id}`, {
+      const response = await fetch(`http://localhost:8001/api/executions/${id}`, {
         method: 'DELETE',
       });
 

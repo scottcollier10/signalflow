@@ -131,7 +131,7 @@ export default function ImportPage() {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch('http://localhost:8000/api/normalize-execution', {
+    const response = await fetch('http://localhost:8001/api/normalize-execution', {
       method: 'POST',
       body: formData,
     });
@@ -174,7 +174,7 @@ export default function ImportPage() {
 
     try {
       // Use backend proxy to avoid CORS issues
-      const response = await fetch('http://localhost:8000/api/n8n/fetch-execution', {
+      const response = await fetch('http://localhost:8001/api/n8n/fetch-execution', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -253,7 +253,7 @@ export default function ImportPage() {
       formData.append('file', fileToUpload);
 
       // POST to backend
-      const response = await fetch('http://localhost:8000/api/normalize-execution', {
+      const response = await fetch('http://localhost:8001/api/normalize-execution', {
         method: 'POST',
         body: formData,
       });

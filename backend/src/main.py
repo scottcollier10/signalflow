@@ -30,7 +30,7 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://localhost:3001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -342,6 +342,9 @@ async def get_bottlenecks(
             total_nodes = len(all_bottlenecks)
             path_percentage = (path_nodes_count / total_nodes * 100) if total_nodes > 0 else 0
 
+        # Generate optimization verdict
+        verdict = analyzer.get_optimization_verdict(all_bottlenecks, total_duration_ms)
+
         return {
             "success": True,
             "data": {
@@ -350,6 +353,7 @@ async def get_bottlenecks(
                     **summary,
                     "total_execution_duration_ms": total_duration_ms
                 },
+                "verdict": verdict,
                 "analysis_context": {
                     "execution_id": execution_id,
                     "analysis_type": "single_execution",

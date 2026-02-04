@@ -34,7 +34,7 @@ interface ExecutionVisualizerProps {
 export function ExecutionVisualizer({
   workflowId,
   executionId,
-  apiBaseUrl = 'http://localhost:8000',
+  apiBaseUrl = 'http://localhost:8001',
   onBack,
   initialBottlenecks,
   initialRecommendations,

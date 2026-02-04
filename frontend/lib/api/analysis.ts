@@ -40,6 +40,19 @@ export interface Bottleneck {
   };
 }
 
+export interface OptimizationVerdict {
+  status: 'well_optimized' | 'minor_improvements' | 'needs_optimization' | 'critical';
+  message: string;
+  color: 'green' | 'yellow' | 'red';
+  stats: {
+    total_duration_s: number;
+    severe_count: number;
+    high_count: number;
+    medium_count: number;
+    high_impact_count: number;
+  };
+}
+
 export interface BottlenecksResponse {
   bottlenecks: Bottleneck[];
   summary: {
@@ -51,6 +64,7 @@ export interface BottlenecksResponse {
       low: number;
     };
   };
+  verdict?: OptimizationVerdict;
 }
 
 export interface Evidence {
@@ -165,6 +179,18 @@ interface RawBottleneckData {
     medium_bottlenecks: number;
     low_bottlenecks: number;
   };
+  verdict?: {
+    status: string;
+    message: string;
+    color: string;
+    stats: {
+      total_duration_s: number;
+      severe_count: number;
+      high_count: number;
+      medium_count: number;
+      high_impact_count: number;
+    };
+  };
 }
 
 interface RawRecommendationData {
@@ -251,7 +277,7 @@ export async function fetchBottlenecks(
     throw new Error('Invalid bottlenecks response');
   }
 
-  const { bottlenecks, summary } = apiResponse.data;
+  const { bottlenecks, summary, verdict } = apiResponse.data;
 
   return {
     bottlenecks: bottlenecks.map(b => ({
@@ -278,6 +304,12 @@ export async function fetchBottlenecks(
         low: summary.low_bottlenecks,
       },
     },
+    verdict: verdict ? {
+      status: verdict.status as OptimizationVerdict['status'],
+      message: verdict.message,
+      color: verdict.color as OptimizationVerdict['color'],
+      stats: verdict.stats,
+    } : undefined,
   };
 }
 

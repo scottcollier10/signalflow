@@ -24,7 +24,7 @@ export default function ExecutionTestPage() {
   useEffect(() => {
     const fetchLatestExecution = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/executions?limit=1');
+        const response = await fetch('http://localhost:8001/api/executions?limit=1');
         if (!response.ok) {
           throw new Error('Failed to fetch executions');
         }
@@ -85,7 +85,7 @@ export default function ExecutionTestPage() {
     <ExecutionVisualizer
       workflowId={execution.workflow_id}
       executionId={execution.id}
-      apiBaseUrl="http://localhost:8000"
+      apiBaseUrl="http://localhost:8001"
     />
   );
 }
