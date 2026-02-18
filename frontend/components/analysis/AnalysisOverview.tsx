@@ -18,9 +18,10 @@ import {
 interface AnalysisOverviewProps {
   data: AnalysisData;
   onViewEvidence: (recommendation: Recommendation) => void;
+  onTabChange?: (tab: 'overview' | 'critical-path' | 'bottlenecks' | 'errors' | 'recommendations') => void;
 }
 
-export function AnalysisOverview({ data, onViewEvidence }: AnalysisOverviewProps) {
+export function AnalysisOverview({ data, onViewEvidence, onTabChange }: AnalysisOverviewProps) {
   const { criticalPath, bottlenecks, errors, recommendations } = data;
   const [showScoringLegend, setShowScoringLegend] = useState(false);
 
@@ -33,22 +34,60 @@ export function AnalysisOverview({ data, onViewEvidence }: AnalysisOverviewProps
   // Get top priority recommendation
   const topRecommendation = recommendations.summary.top_priority || recommendations.recommendations[0];
 
+  // Handle verdict banner click - navigate to relevant tab
+  const handleVerdictClick = () => {
+    if (!onTabChange || !verdict) return;
+
+    switch (verdict.status) {
+      case 'critical':
+      case 'needs_optimization':
+        // Has recommendations - go to recommendations tab
+        onTabChange('recommendations');
+        break;
+      case 'minor_improvements':
+        // Minor issues - go to bottlenecks tab
+        onTabChange('bottlenecks');
+        break;
+      default:
+        // Well optimized - no action needed
+        break;
+    }
+  };
+
+  // Determine if verdict banner should be clickable
+  const isVerdictClickable = verdict && verdict.status !== 'well_optimized' && onTabChange;
+  
+  // Debug logging
+  console.log('[AnalysisOverview] Debug:', {
+    hasVerdict: !!verdict,
+    verdictStatus: verdict?.status,
+    isNotWellOptimized: verdict?.status !== 'well_optimized',
+    hasOnTabChange: !!onTabChange,
+    isVerdictClickable
+  });
+
   return (
     <div className="space-y-6">
       {/* Optimization Verdict Banner */}
       {verdict && (
-        <div className={`rounded-lg border-2 p-4 ${
-          verdict.color === 'green'
-            ? 'border-green-300 bg-green-50'
-            : verdict.color === 'yellow'
-            ? 'border-yellow-300 bg-yellow-50'
-            : 'border-red-300 bg-red-50'
-        }`}>
+        <div
+          className={`rounded-lg border-2 p-4 ${
+            verdict.color === 'green'
+              ? 'border-green-300 bg-green-50'
+              : verdict.color === 'yellow'
+              ? 'border-yellow-300 bg-yellow-50'
+              : 'border-red-300 bg-red-50'
+          } ${isVerdictClickable ? 'cursor-pointer hover:brightness-95 transition-all' : ''}`}
+          onClick={isVerdictClickable ? handleVerdictClick : undefined}
+          role={isVerdictClickable ? 'button' : undefined}
+          tabIndex={isVerdictClickable ? 0 : undefined}
+          onKeyDown={isVerdictClickable ? (e) => e.key === 'Enter' && handleVerdictClick() : undefined}
+        >
           <div className="flex items-center gap-3">
             <span className="text-2xl">
               {verdict.color === 'green' ? '\u2705' : verdict.color === 'yellow' ? '\u26A0\uFE0F' : '\u{1F534}'}
             </span>
-            <div>
+            <div className="flex-1">
               <h3 className={`font-semibold text-lg ${
                 verdict.color === 'green' ? 'text-green-800' :
                 verdict.color === 'yellow' ? 'text-yellow-800' : 'text-red-800'
@@ -65,6 +104,17 @@ export function AnalysisOverview({ data, onViewEvidence }: AnalysisOverviewProps
                 {verdict.message}
               </p>
             </div>
+            {isVerdictClickable && (
+              <div className={`flex items-center gap-1 text-sm ${
+                verdict.color === 'green' ? 'text-green-600' :
+                verdict.color === 'yellow' ? 'text-yellow-600' : 'text-red-600'
+              }`}>
+                <span>View</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            )}
           </div>
         </div>
       )}

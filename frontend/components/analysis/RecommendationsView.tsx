@@ -45,6 +45,8 @@ interface RecommendationsViewProps {
   onSortChange: (sortBy: SortOption) => void;
   onViewEvidence: (recommendation: Recommendation) => void;
   exportData?: ExportData;
+  nodeFilter?: string | null;
+  onClearNodeFilter?: () => void;
 }
 
 const CATEGORY_INFO: Record<string, { label: string; icon: string; description: string; color: string }> = {
@@ -82,6 +84,8 @@ export function RecommendationsView({
   onSortChange,
   onViewEvidence,
   exportData,
+  nodeFilter,
+  onClearNodeFilter,
 }: RecommendationsViewProps) {
   const { recommendations, summary } = data;
   const [viewMode, setViewMode] = useState<ViewMode>('grouped');
@@ -265,6 +269,16 @@ export function RecommendationsView({
   // Filter and sort recommendations
   const filteredRecommendations = useMemo(() => {
     let filtered = recommendations.filter((rec) => {
+      // Apply node filter if present (from "View Fix" button on bottleneck card)
+      if (nodeFilter) {
+        // Check if this recommendation affects the filtered node
+        // Match by node name in affected_node_ids or in evidence/title
+        const affectsNode = rec.affected_node_ids?.some(nodeId =>
+          nodeId.toLowerCase().includes(nodeFilter.toLowerCase())
+        ) || rec.title.toLowerCase().includes(nodeFilter.toLowerCase());
+        if (!affectsNode) return false;
+      }
+
       if (filters.category !== 'all' && rec.category !== filters.category) return false;
       if (filters.impact !== 'all' && rec.impact !== filters.impact) return false;
       if (filters.effort !== 'all' && rec.effort !== filters.effort) return false;
@@ -289,7 +303,7 @@ export function RecommendationsView({
           return 0;
       }
     });
-  }, [recommendations, filters, sortBy]);
+  }, [recommendations, filters, sortBy, nodeFilter]);
 
   // Group recommendations by category
   const groupedRecommendations = useMemo(() => {
@@ -317,6 +331,38 @@ export function RecommendationsView({
 
   return (
     <div className="space-y-6">
+      {/* Node Filter Banner */}
+      {nodeFilter && (
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+              <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-purple-800">
+                Showing recommendations for: <span className="font-semibold">{nodeFilter}</span>
+              </div>
+              <div className="text-xs text-purple-600">
+                {filteredRecommendations.length} recommendation{filteredRecommendations.length !== 1 ? 's' : ''} found
+              </div>
+            </div>
+          </div>
+          {onClearNodeFilter && (
+            <button
+              onClick={onClearNodeFilter}
+              className="px-3 py-1.5 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition-colors flex items-center gap-1.5"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Clear Filter
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">

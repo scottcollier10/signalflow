@@ -64,6 +64,20 @@ export default function AnalysisDashboard({
     effort: 'all',
   });
   const [sortBy, setSortBy] = useState<SortOption>('priority');
+  const [nodeFilter, setNodeFilter] = useState<string | null>(null);
+
+  // Handle node filter from bottleneck "View Fix" button
+  const handleNodeFilter = (nodeName: string) => {
+    setNodeFilter(nodeName);
+  };
+
+  // Clear node filter when changing tabs away from recommendations
+  const handleTabChange = (tab: TabType) => {
+    if (tab !== 'recommendations') {
+      setNodeFilter(null);
+    }
+    setActiveTab(tab);
+  };
 
   // Fetch execution metadata first to get workflow_id
   useEffect(() => {
@@ -165,7 +179,7 @@ export default function AnalysisDashboard({
         executionId={executionId}
         workflowId={executionMeta?.workflow_id}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         summary={{
           criticalPathNodes: analysisData.criticalPath.summary.node_count,
           bottlenecksCount: analysisData.bottlenecks.bottlenecks.length,
@@ -177,7 +191,7 @@ export default function AnalysisDashboard({
       {/* Tab Content */}
       <div className="mt-6">
         {activeTab === 'overview' && (
-          <AnalysisOverview data={analysisData} onViewEvidence={handleViewEvidence} />
+          <AnalysisOverview data={analysisData} onViewEvidence={handleViewEvidence} onTabChange={handleTabChange} />
         )}
 
         {activeTab === 'critical-path' && (
@@ -185,7 +199,11 @@ export default function AnalysisDashboard({
         )}
 
         {activeTab === 'bottlenecks' && (
-          <BottleneckView data={analysisData.bottlenecks} />
+          <BottleneckView
+            data={analysisData.bottlenecks}
+            onTabChange={handleTabChange}
+            onNodeFilter={handleNodeFilter}
+          />
         )}
 
         {activeTab === 'errors' && (
@@ -200,6 +218,8 @@ export default function AnalysisDashboard({
             onFilterChange={setFilters}
             onSortChange={setSortBy}
             onViewEvidence={handleViewEvidence}
+            nodeFilter={nodeFilter}
+            onClearNodeFilter={() => setNodeFilter(null)}
             exportData={{
               workflowName: executionMeta?.workflow_id ? `Workflow ${executionMeta.workflow_id.slice(0, 8)}` : 'Unnamed Workflow',
               workflowId: executionMeta?.workflow_id || '',

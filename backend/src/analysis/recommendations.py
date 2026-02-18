@@ -216,6 +216,10 @@ class RecommendationEngine:
         recommendations.extend(await self._apply_rule_39_critical_path_bottleneck())
         recommendations.extend(await self._apply_rule_40_high_variance_node())
 
+        # Fallback rule (41) - FINAL PASS: catch orphaned high-severity bottlenecks
+        # This ensures "Optimization Recommended" verdict always has recommendations
+        recommendations.extend(await self._apply_rule_41_orphaned_bottleneck(recommendations))
+
         # Phase 3: Calculate priority scores and sort
         for rec in recommendations:
             rec.priority_score = self._calculate_priority_score(rec)
@@ -2399,6 +2403,89 @@ function validateInput(data) {
                     priority_score=0.0,
                     category=RecommendationCategory.PERFORMANCE,
                     affected_node_ids=[bottleneck['node_id']]
+                ))
+
+        return recommendations
+
+    async def _apply_rule_41_orphaned_bottleneck(self, existing_recommendations: List[Recommendation]) -> List[Recommendation]:
+        """
+        Rule #41: Orphaned High-Severity Bottleneck → Generic Review Recommendation
+
+        This is a FALLBACK RULE that runs AFTER all other rules.
+        It ensures that high-severity bottlenecks on the critical path always have
+        at least one recommendation, preventing the "Optimization Recommended" verdict
+        from appearing with 0 recommendations.
+
+        Trigger: Bottleneck score >= 70 (high or severe) AND on critical path AND no existing recommendations
+        """
+        recommendations = []
+
+        if not self.bottlenecks:
+            return recommendations
+
+        # Build set of node_ids that already have recommendations
+        nodes_with_recommendations = set()
+        for rec in existing_recommendations:
+            for node_id in rec.affected_node_ids:
+                nodes_with_recommendations.add(node_id)
+
+        for bottleneck in self.bottlenecks:
+            score = bottleneck.get('bottleneck_score', 0)
+            on_critical_path = bottleneck.get('on_critical_path', False)
+            node_id = bottleneck.get('node_id')
+            node_name = bottleneck.get('node_name', 'Unknown')
+            node_type = bottleneck.get('node_type', 'unknown')
+            duration_ms = bottleneck.get('duration_ms', 0)
+
+            # Only target high-severity (>= 70) bottlenecks on critical path with no recommendations
+            if score >= 70 and on_critical_path and node_id not in nodes_with_recommendations:
+                severity_label = "severe" if score >= 90 else "high"
+
+                evidence = [
+                    Evidence(
+                        type="bottleneck",
+                        description=f"High-impact bottleneck (score: {score}/100) on critical path",
+                        data={
+                            'score': score,
+                            'duration_ms': duration_ms,
+                            'on_critical_path': True,
+                            'node_type': node_type
+                        },
+                        link=f"/execution/{self.execution_id}?tab=bottlenecks&node={node_name}"
+                    )
+                ]
+
+                # Create actionable guidance based on node type
+                guidance_items = [
+                    "reducing the amount of data processed",
+                    "optimizing the node's internal logic",
+                    "adding caching for repeated operations",
+                    "parallelizing independent operations"
+                ]
+
+                # Add node-type specific suggestions
+                if 'http' in node_type.lower() or 'api' in node_type.lower():
+                    guidance_items.insert(0, "batching multiple API calls")
+                elif 'database' in node_type.lower() or 'query' in node_type.lower():
+                    guidance_items.insert(0, "optimizing database queries")
+                elif 'loop' in node_type.lower() or 'foreach' in node_type.lower():
+                    guidance_items.insert(0, "reducing loop iterations")
+
+                guidance_text = ", ".join(guidance_items[:3])
+
+                recommendations.append(Recommendation(
+                    id=str(uuid.uuid4()),
+                    rule_id=41,
+                    title=f"Review High-Impact Node: {node_name}",
+                    description=f"This node is a significant bottleneck ({severity_label} severity, {duration_ms/1000:.1f}s) on your critical path but doesn't match specific optimization patterns. Review its configuration and consider: {guidance_text}.",
+                    evidence=evidence,
+                    impact=ImpactLevel.HIGH if score >= 80 else ImpactLevel.MEDIUM,
+                    impact_details=f"Potential time savings: {duration_ms * 0.3 / 1000:.1f}s (30% improvement target)",
+                    effort=EffortLevel.MEDIUM,
+                    priority_score=0.0,
+                    category=RecommendationCategory.PERFORMANCE,
+                    affected_node_ids=[node_id],
+                    time_saved_ms=int(duration_ms * 0.3)
                 ))
 
         return recommendations

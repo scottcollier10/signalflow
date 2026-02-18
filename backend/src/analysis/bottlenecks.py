@@ -39,6 +39,7 @@ class BottleneckScore:
     percentage_of_total: float
     factors: Dict[str, float]  # duration, position, frequency, variance
     evidence: Optional[Dict] = None
+    has_recommendations: Optional[bool] = None  # Set by API after checking recommendations
 
     def to_dict(self) -> Dict:
         """Convert to dictionary for API response"""
@@ -522,22 +523,27 @@ class BottleneckAnalyzer:
             'top_bottleneck_impact_percentage': round(top_bottleneck_impact, 1)
         }
 
-    def get_optimization_verdict(self, bottlenecks: List[BottleneckScore], total_duration_ms: int) -> Dict:
+    def get_optimization_verdict(self, bottlenecks: List[BottleneckScore], total_duration_ms: int, recommendation_count: int = None) -> Dict:
         """
         Generate an optimization verdict based on bottleneck analysis.
 
         Returns a verdict with status, message, and supporting data
         to help users understand if further optimization is needed.
 
+        IMPORTANT: Verdict only shows "needs_optimization" or "critical" when
+        recommendations actually exist. This prevents the confusing UX where
+        the banner says "Optimization Recommended" but no recommendations are available.
+
         Verdict levels:
         - "well_optimized": No severe/high bottlenecks, total < 5s
         - "minor_improvements": Only medium bottlenecks, reasonable total time
-        - "needs_optimization": Has high/severe bottlenecks
-        - "critical": Multiple severe bottlenecks or very slow execution
+        - "needs_optimization": Has high/severe bottlenecks AND recommendations exist
+        - "critical": Multiple severe bottlenecks AND recommendations exist
 
         Args:
             bottlenecks: List of all bottleneck scores
             total_duration_ms: Total execution duration in milliseconds
+            recommendation_count: Number of recommendations (optional, enables verdict gating)
 
         Returns:
             Dictionary with verdict status, message, color, and stats
@@ -548,8 +554,13 @@ class BottleneckAnalyzer:
 
         total_seconds = total_duration_ms / 1000
 
+        # Check if recommendations exist (enables verdict gating)
+        # If recommendation_count is None, we fall back to old behavior for backwards compatibility
+        has_recommendations = recommendation_count is None or recommendation_count > 0
+
         # Determine verdict
-        if severe_count > 0:
+        # Only show "needs_optimization" or "critical" if recommendations exist
+        if severe_count > 0 and has_recommendations:
             if severe_count >= 2:
                 verdict_status = "critical"
                 verdict_message = f"Critical: {severe_count} severe bottlenecks detected. Immediate optimization recommended."
@@ -558,9 +569,14 @@ class BottleneckAnalyzer:
                 verdict_status = "needs_optimization"
                 verdict_message = "1 severe bottleneck found. Focus optimization on the top-ranked node."
                 verdict_color = "red"
-        elif high_count > 0:
+        elif high_count > 0 and has_recommendations:
             verdict_status = "needs_optimization"
             verdict_message = f"{high_count} high-impact bottleneck{'s' if high_count > 1 else ''} found. Optimization recommended."
+            verdict_color = "yellow"
+        elif severe_count > 0 or high_count > 0:
+            # Has bottlenecks but NO recommendations - downgrade to minor_improvements
+            verdict_status = "minor_improvements"
+            verdict_message = "Bottlenecks detected but no specific optimizations identified. Performance is acceptable."
             verdict_color = "yellow"
         elif medium_count > 3:
             verdict_status = "minor_improvements"
@@ -584,6 +600,7 @@ class BottleneckAnalyzer:
                 "severe_count": severe_count,
                 "high_count": high_count,
                 "medium_count": medium_count,
-                "high_impact_count": severe_count + high_count
+                "high_impact_count": severe_count + high_count,
+                "recommendation_count": recommendation_count
             }
         }

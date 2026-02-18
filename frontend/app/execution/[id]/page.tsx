@@ -67,6 +67,20 @@ export default function ExecutionPage({ params }: ExecutionPageProps) {
     effort: 'all',
   });
   const [sortBy, setSortBy] = useState<SortOption>('priority');
+  const [nodeFilter, setNodeFilter] = useState<string | null>(null);
+
+  // Handle node filter from bottleneck "View Fix" button
+  const handleNodeFilter = (nodeName: string) => {
+    setNodeFilter(nodeName);
+  };
+
+  // Handle tab change - clears node filter when leaving recommendations
+  const handleTabChange = (tab: TabId) => {
+    if (tab !== 'recommendations') {
+      setNodeFilter(null);
+    }
+    setActiveTab(tab);
+  };
 
   // Load data
   useEffect(() => {
@@ -222,7 +236,7 @@ export default function ExecutionPage({ params }: ExecutionPageProps) {
               <div className="px-6">
                 <ExecutionTabs
                   activeTab={activeTab}
-                  onTabChange={setActiveTab}
+                  onTabChange={handleTabChange}
                   counts={counts}
                 />
               </div>
@@ -231,7 +245,11 @@ export default function ExecutionPage({ params }: ExecutionPageProps) {
             {/* Tab Content */}
             <div className="mt-6">
               {activeTab === 'overview' && analysisData && (
-                <AnalysisOverview data={analysisData} onViewEvidence={handleViewEvidence} />
+                <AnalysisOverview
+                  data={analysisData}
+                  onViewEvidence={handleViewEvidence}
+                  onTabChange={handleTabChange}
+                />
               )}
 
               {activeTab === 'critical-path' && analysisData && (
@@ -239,7 +257,11 @@ export default function ExecutionPage({ params }: ExecutionPageProps) {
               )}
 
               {activeTab === 'bottlenecks' && analysisData && (
-                <BottleneckView data={analysisData.bottlenecks} />
+                <BottleneckView
+                  data={analysisData.bottlenecks}
+                  onTabChange={handleTabChange}
+                  onNodeFilter={handleNodeFilter}
+                />
               )}
 
               {activeTab === 'errors' && analysisData && (
@@ -254,6 +276,8 @@ export default function ExecutionPage({ params }: ExecutionPageProps) {
                   onFilterChange={setFilters}
                   onSortChange={setSortBy}
                   onViewEvidence={handleViewEvidence}
+                  nodeFilter={nodeFilter}
+                  onClearNodeFilter={() => setNodeFilter(null)}
                   exportData={{
                     workflowName: executionMeta?.workflow_name || `Workflow ${executionMeta?.workflow_id?.slice(0, 8) || 'Unknown'}`,
                     workflowId: executionMeta?.workflow_id || '',

@@ -38,6 +38,7 @@ export interface Bottleneck {
     frequency_factor: number;
     variance_factor: number;
   };
+  has_recommendations?: boolean;
 }
 
 export interface OptimizationVerdict {
@@ -171,6 +172,7 @@ interface RawBottleneckData {
       frequency: number;
       variance: number;
     };
+    has_recommendations?: boolean;
   }>;
   summary: {
     total_nodes_analyzed: number;
@@ -294,6 +296,7 @@ export async function fetchBottlenecks(
         frequency_factor: b.factors.frequency,
         variance_factor: b.factors.variance,
       },
+      has_recommendations: b.has_recommendations,
     })),
     summary: {
       total_nodes_analyzed: summary.total_nodes_analyzed,

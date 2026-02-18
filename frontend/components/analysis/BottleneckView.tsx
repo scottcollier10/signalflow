@@ -13,10 +13,39 @@ type SeverityFilter = 'all' | 'severe' | 'high' | 'medium' | 'low';
 
 interface BottleneckViewProps {
   data: BottlenecksResponse;
+  onTabChange?: (tab: 'overview' | 'critical-path' | 'bottlenecks' | 'errors' | 'recommendations') => void;
+  onNodeFilter?: (nodeName: string) => void;
 }
 
-export function BottleneckView({ data }: BottleneckViewProps) {
+export function BottleneckView({ data, onTabChange, onNodeFilter }: BottleneckViewProps) {
   const { bottlenecks, summary } = data;
+
+  // Debug: Log props at render time
+  console.log('[BottleneckView] Component render - props received:', {
+    hasData: !!data,
+    hasOnTabChange: !!onTabChange,
+    hasOnNodeFilter: !!onNodeFilter,
+    onTabChangeType: typeof onTabChange,
+    onNodeFilterType: typeof onNodeFilter
+  });
+
+  // Handle "View Fix" button click
+  const handleViewFix = (nodeName: string) => {
+    console.log('[BottleneckView] handleViewFix called:', {
+      nodeName,
+      hasOnNodeFilter: !!onNodeFilter,
+      hasOnTabChange: !!onTabChange
+    });
+
+    if (onNodeFilter) {
+      console.log('[BottleneckView] Calling onNodeFilter with:', nodeName);
+      onNodeFilter(nodeName);
+    }
+    if (onTabChange) {
+      console.log('[BottleneckView] Calling onTabChange with: recommendations');
+      onTabChange('recommendations');
+    }
+  };
   const [activeFilter, setActiveFilter] = useState<SeverityFilter>('all');
   const [showScoringInfo, setShowScoringInfo] = useState(false);
 
@@ -188,7 +217,11 @@ export function BottleneckView({ data }: BottleneckViewProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredBottlenecks.map((bottleneck) => (
-            <BottleneckCard key={bottleneck.node_id} bottleneck={bottleneck} />
+            <BottleneckCard
+              key={bottleneck.node_id}
+              bottleneck={bottleneck}
+              onViewFix={bottleneck.has_recommendations ? () => handleViewFix(bottleneck.node_name) : undefined}
+            />
           ))}
         </div>
 
@@ -342,8 +375,17 @@ function SeverityCard({
   );
 }
 
-function BottleneckCard({ bottleneck }: { bottleneck: Bottleneck }) {
+function BottleneckCard({ bottleneck, onViewFix }: { bottleneck: Bottleneck; onViewFix?: () => void }) {
   const colors = getSeverityColors(bottleneck.severity);
+
+  // Debug logging
+  if (bottleneck.has_recommendations) {
+    console.log('[BottleneckCard] Card with recommendations:', {
+      nodeName: bottleneck.node_name,
+      hasRecommendations: bottleneck.has_recommendations,
+      hasOnViewFix: !!onViewFix
+    });
+  }
 
   return (
     <div className={`p-4 rounded-lg border-2 ${colors.bg} ${colors.border}`}>
@@ -378,6 +420,26 @@ function BottleneckCard({ bottleneck }: { bottleneck: Bottleneck }) {
           />
         </div>
       </div>
+
+      {/* View Fix Button - only shown when has_recommendations is true */}
+      {onViewFix && (
+        <div className="mt-3">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log('[BottleneckCard] View Fix button clicked for:', bottleneck.node_name);
+              onViewFix();
+            }}
+            className="w-full px-3 py-2 bg-purple-600 text-white rounded-md text-sm font-medium hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            View Fix
+          </button>
+        </div>
+      )}
 
       {bottleneck.is_on_critical_path && (
         <div className="mt-3 pt-3 border-t border-gray-200">

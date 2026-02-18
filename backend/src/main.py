@@ -342,8 +342,36 @@ async def get_bottlenecks(
             total_nodes = len(all_bottlenecks)
             path_percentage = (path_nodes_count / total_nodes * 100) if total_nodes > 0 else 0
 
-        # Generate optimization verdict
-        verdict = analyzer.get_optimization_verdict(all_bottlenecks, total_duration_ms)
+        # Generate recommendations to check which bottlenecks have fixes
+        # This enables the "View Fix" button on bottleneck cards
+        try:
+            engine = RecommendationEngine(supabase)
+            rec_result = await engine.generate_recommendations(execution_id, workflow_id)
+            recommendations = rec_result.get('data', {}).get('recommendations', [])
+
+            # Build set of node_ids that have recommendations
+            nodes_with_recommendations = set()
+            for rec in recommendations:
+                for node_id in rec.get('affected_node_ids', []):
+                    nodes_with_recommendations.add(node_id)
+
+            # Set has_recommendations flag on each bottleneck
+            for b in bottlenecks:
+                b.has_recommendations = b.node_id in nodes_with_recommendations
+            for b in all_bottlenecks:
+                b.has_recommendations = b.node_id in nodes_with_recommendations
+
+            recommendation_count = len(recommendations)
+        except Exception as e:
+            print(f"Warning: Could not generate recommendations for has_recommendations flag: {e}")
+            recommendation_count = 0
+            for b in bottlenecks:
+                b.has_recommendations = False
+            for b in all_bottlenecks:
+                b.has_recommendations = False
+
+        # Generate optimization verdict (now aware of recommendations)
+        verdict = analyzer.get_optimization_verdict(all_bottlenecks, total_duration_ms, recommendation_count)
 
         return {
             "success": True,
