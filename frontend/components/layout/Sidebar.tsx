@@ -2,7 +2,7 @@
 
 /**
  * Global Sidebar Navigation
- * Collapsible sidebar with main navigation items
+ * Collapsible sidebar with neumorphic design
  */
 
 import { useState, useEffect } from 'react';
@@ -88,10 +88,10 @@ export function Sidebar() {
       {/* Mobile hamburger button */}
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md border border-gray-200"
+        className="lg:hidden fixed top-4 left-4 z-50 btn-icon"
         aria-label="Toggle menu"
       >
-        <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           {isMobileOpen ? (
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           ) : (
@@ -103,7 +103,7 @@ export function Sidebar() {
       {/* Mobile overlay */}
       {isMobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/30 z-30"
+          className="lg:hidden fixed inset-0 bg-black/50 z-30 backdrop-blur-sm"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
@@ -111,7 +111,7 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 h-full bg-white border-r border-gray-200 z-40
+          fixed top-0 left-0 h-full neu-sidebar z-40
           transition-all duration-300 ease-in-out
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
           lg:translate-x-0
@@ -119,33 +119,37 @@ export function Sidebar() {
         `}
       >
         {/* Logo/Brand */}
-        <div className={`flex items-center h-16 px-4 border-b border-gray-200 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+        <div className={`flex items-center h-16 px-4 border-b border-neu-shadow-light/30 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
           {isCollapsed ? (
             // Collapsed: Show only logo icon that toggles sidebar
             <button
               onClick={toggleCollapsed}
-              className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-700 transition-colors"
+              className="w-10 h-10 rounded-lg flex items-center justify-center hover:scale-105 transition-transform"
+              style={{ background: 'linear-gradient(145deg, #b5a8e8, #9b8bd8)' }}
               aria-label="Expand sidebar"
             >
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6 text-neu-bg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </button>
           ) : (
             <>
               <Link href="/dashboard" className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style={{ background: 'linear-gradient(145deg, #b5a8e8, #9b8bd8)' }}
+                >
+                  <svg className="w-5 h-5 text-neu-bg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
-                <span className="text-lg font-bold text-gray-900">SignalFlow</span>
+                <span className="text-lg font-display font-bold text-neu-text">SignalFlow</span>
               </Link>
 
               {/* Collapse button (desktop only) */}
               <button
                 onClick={toggleCollapsed}
-                className="hidden lg:flex p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg"
+                className="hidden lg:flex p-1.5 text-neu-text-muted hover:text-neu-accent rounded-lg transition-colors"
                 aria-label="Collapse sidebar"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -163,10 +167,10 @@ export function Sidebar() {
               key={item.name}
               href={item.href}
               className={`
-                flex items-center rounded-lg transition-colors
+                flex items-center rounded-lg transition-all duration-200
                 ${isActive(item.href)
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  ? 'bg-neu-accent/10 text-neu-accent shadow-neu-raised-sm'
+                  : 'text-neu-text-muted hover:text-neu-text hover:bg-neu-shadow-light/20'
                 }
                 ${isCollapsed
                   ? 'justify-center p-3'
@@ -182,14 +186,14 @@ export function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div className={`absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 ${isCollapsed ? 'text-center' : ''}`}>
+        <div className={`absolute bottom-0 left-0 right-0 p-4 border-t border-neu-shadow-light/30 ${isCollapsed ? 'text-center' : ''}`}>
           {!isCollapsed ? (
-            <div className="text-xs text-gray-500">
-              <div>SignalFlow v0.8</div>
-              <div className="mt-1">Week 4 - UX Polish</div>
+            <div className="text-xs text-neu-text-muted">
+              <div className="font-display font-semibold text-neu-accent">SignalFlow v0.8</div>
+              <div className="mt-1">Week 5 - Design System</div>
             </div>
           ) : (
-            <div className="text-xs text-gray-500">v0.8</div>
+            <div className="text-xs text-neu-text-muted">v0.8</div>
           )}
         </div>
       </aside>

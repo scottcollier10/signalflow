@@ -2,7 +2,7 @@
 
 /**
  * Execution Tabs Component
- * Tab navigation for unified execution view
+ * Tab navigation for unified execution view with neumorphic design
  */
 
 import { cn } from '@/lib/utils';
@@ -58,7 +58,7 @@ export function ExecutionTabs({ activeTab, onTabChange, counts }: ExecutionTabsP
         </svg>
       ),
       count: counts.criticalPath,
-      countColor: 'bg-blue-100 text-blue-800',
+      countColor: 'bg-neu-teal/15 text-neu-teal',
     },
     {
       id: 'bottlenecks',
@@ -69,7 +69,7 @@ export function ExecutionTabs({ activeTab, onTabChange, counts }: ExecutionTabsP
         </svg>
       ),
       count: counts.bottlenecks,
-      countColor: 'bg-orange-100 text-orange-800',
+      countColor: 'bg-neu-orange/15 text-neu-orange',
     },
     {
       id: 'errors',
@@ -80,7 +80,7 @@ export function ExecutionTabs({ activeTab, onTabChange, counts }: ExecutionTabsP
         </svg>
       ),
       count: counts.errors,
-      countColor: counts.errors > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800',
+      countColor: counts.errors > 0 ? 'bg-neu-coral/15 text-neu-coral' : 'bg-neu-green/15 text-neu-green',
     },
     {
       id: 'recommendations',
@@ -91,22 +91,22 @@ export function ExecutionTabs({ activeTab, onTabChange, counts }: ExecutionTabsP
         </svg>
       ),
       count: counts.recommendations,
-      countColor: 'bg-purple-100 text-purple-800',
+      countColor: 'bg-neu-accent/15 text-neu-accent',
     },
   ];
 
   return (
-    <div className="border-b border-gray-200">
-      <nav className="-mb-px flex overflow-x-auto" aria-label="Tabs">
+    <div className="border-b border-neu-shadow-light/30">
+      <nav className="-mb-px flex overflow-x-auto scrollbar-hide" aria-label="Tabs">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
             className={cn(
-              'flex items-center gap-2 whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm transition-colors',
+              'flex items-center gap-2 whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm transition-all duration-200',
               activeTab === tab.id
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-neu-accent text-neu-accent'
+                : 'border-transparent text-neu-text-muted hover:text-neu-text hover:border-neu-shadow-light/50'
             )}
           >
             {tab.icon}
@@ -114,7 +114,7 @@ export function ExecutionTabs({ activeTab, onTabChange, counts }: ExecutionTabsP
             {tab.count !== undefined && (
               <span className={cn(
                 'px-2 py-0.5 rounded-full text-xs font-medium',
-                tab.countColor || 'bg-gray-100 text-gray-600'
+                tab.countColor || 'bg-neu-shadow-light/30 text-neu-text-muted'
               )}>
                 {tab.count}
               </span>

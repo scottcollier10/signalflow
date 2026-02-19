@@ -2,7 +2,7 @@
 
 /**
  * Dashboard Page
- * Shows all executions grouped by workflow
+ * Shows all executions grouped by workflow with neumorphic design
  */
 
 import { useState, useEffect } from 'react';
@@ -147,17 +147,19 @@ export default function DashboardPage() {
     <AppLayout>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Execution Dashboard</h1>
-            <p className="text-gray-500 mt-1">
+            <h1 className="font-display text-4xl font-bold text-neu-text mb-2">
+              Execution Dashboard
+            </h1>
+            <p className="text-neu-text-muted font-body">
               {executions.length} execution{executions.length !== 1 ? 's' : ''} across {workflows.size} workflow{workflows.size !== 1 ? 's' : ''}
             </p>
           </div>
 
           <Link
             href="/import"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            className="btn-primary inline-flex items-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -167,14 +169,14 @@ export default function DashboardPage() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+        <div className="neu-raised p-4 mb-6">
           <div className="flex flex-wrap items-center gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700 mr-2">Status:</label>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-neu-text-muted">Status:</label>
               <select
                 value={filter}
                 onChange={(e) => setFilter(e.target.value as FilterType)}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="select-neu"
               >
                 <option value="all">All</option>
                 <option value="success">Success</option>
@@ -182,12 +184,12 @@ export default function DashboardPage() {
               </select>
             </div>
 
-            <div>
-              <label className="text-sm font-medium text-gray-700 mr-2">Group by:</label>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-neu-text-muted">Group by:</label>
               <select
                 value={groupBy}
                 onChange={(e) => setGroupBy(e.target.value as GroupBy)}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="select-neu"
               >
                 <option value="workflow">Workflow</option>
                 <option value="date">Date</option>
@@ -197,48 +199,54 @@ export default function DashboardPage() {
 
             <button
               onClick={fetchExecutions}
-              className="ml-auto inline-flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900"
+              className="btn-icon ml-auto"
+              title="Refresh"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              Refresh
             </button>
           </div>
         </div>
 
         {/* Content */}
         {loading ? (
-          <div className="flex items-center justify-center py-12">
+          <div className="neu-flat p-12 flex items-center justify-center">
             <div className="text-center">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <p className="mt-4 text-gray-600">Loading executions...</p>
+              <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-neu-accent mb-4"></div>
+              <p className="text-neu-text-muted font-body">Loading executions...</p>
             </div>
           </div>
         ) : error ? (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-            <svg className="mx-auto h-12 w-12 text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <h3 className="text-lg font-medium text-red-800 mb-2">Failed to load executions</h3>
-            <p className="text-red-600 mb-4">{error}</p>
+          <div className="neu-flat p-8 text-center">
+            <div className="w-16 h-16 rounded-full bg-neu-coral/10 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-neu-coral" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="font-display text-xl font-semibold text-neu-text mb-2">Failed to load executions</h3>
+            <p className="text-neu-text-muted mb-6">{error}</p>
             <button
               onClick={fetchExecutions}
-              className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200"
+              className="btn-secondary"
             >
               Try Again
             </button>
           </div>
         ) : executions.length === 0 ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-            <svg className="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-            </svg>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No executions yet</h3>
-            <p className="text-gray-500 mb-6">Import your first n8n execution to get started with analysis.</p>
+          <div className="neu-flat p-12 text-center">
+            <div className="w-20 h-20 rounded-full bg-neu-accent/10 flex items-center justify-center mx-auto mb-6">
+              <svg className="w-10 h-10 text-neu-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+              </svg>
+            </div>
+            <h3 className="font-display text-2xl font-semibold text-neu-text mb-2">No executions yet</h3>
+            <p className="text-neu-text-muted mb-6 max-w-md mx-auto">
+              Import your first n8n execution to get started with analysis.
+            </p>
             <Link
               href="/import"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              className="btn-primary inline-flex items-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -248,13 +256,14 @@ export default function DashboardPage() {
           </div>
         ) : groups === null ? (
           // Ungrouped view
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredExecutions.map((execution) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredExecutions.map((execution, index) => (
               <ExecutionCard
                 key={execution.id}
                 execution={execution}
                 onDelete={handleDeleteExecution}
                 showWorkflow
+                animationDelay={index}
               />
             ))}
           </div>
@@ -272,20 +281,26 @@ export default function DashboardPage() {
                 />
               ) : (
                 <div key={key} className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    {key}
-                    <span className="text-sm font-normal text-gray-500">({groupExecs.length} execution{groupExecs.length !== 1 ? 's' : ''})</span>
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {groupExecs.map((execution) => (
+                  <div className="flex items-center gap-3">
+                    <div className="w-1 h-8 rounded-full bg-gradient-to-b from-neu-accent to-neu-accent-light" />
+                    <h3 className="font-display text-xl font-semibold text-neu-text flex items-center gap-3">
+                      <svg className="w-5 h-5 text-neu-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      {key}
+                      <span className="text-sm font-normal text-neu-text-muted">
+                        ({groupExecs.length} execution{groupExecs.length !== 1 ? 's' : ''})
+                      </span>
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {groupExecs.map((execution, index) => (
                       <ExecutionCard
                         key={execution.id}
                         execution={execution}
                         onDelete={handleDeleteExecution}
                         showWorkflow
+                        animationDelay={index}
                       />
                     ))}
                   </div>

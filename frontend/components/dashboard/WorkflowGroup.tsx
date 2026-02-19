@@ -2,7 +2,7 @@
 
 /**
  * Workflow Group Component
- * Groups executions by workflow with expandable sections
+ * Groups executions by workflow with neumorphic design
  */
 
 import { useState } from 'react';
@@ -21,7 +21,7 @@ export function WorkflowGroup({
   workflowName,
   executions,
   onDeleteExecution,
-  defaultExpanded = false,
+  defaultExpanded = true,
 }: WorkflowGroupProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
@@ -29,36 +29,46 @@ export function WorkflowGroup({
   const errorCount = executions.filter(e => e.status === 'error').length;
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+    <div className="neu-raised">
       {/* Header - Clickable to expand/collapse */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-4 py-3 flex items-center justify-between gap-4 hover:bg-gray-50 transition-colors rounded-t-lg"
+        className="w-full px-5 py-4 flex items-center justify-between gap-4 hover:bg-neu-shadow-light/10 transition-colors rounded-neu-lg"
       >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex items-center gap-4">
+          {/* Accent indicator */}
+          <div className="w-1.5 h-12 rounded-full bg-gradient-to-b from-neu-accent to-neu-accent-light" />
+
+          {/* Icon */}
+          <div
+            className="w-12 h-12 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: 'linear-gradient(145deg, #242830, #1a1c22)' }}
+          >
+            <svg className="w-6 h-6 text-neu-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
           </div>
+
+          {/* Text */}
           <div className="text-left">
-            <h3 className="font-semibold text-gray-900">
+            <h3 className="font-display font-semibold text-lg text-neu-text">
               {workflowName || `Workflow ${workflowId.slice(0, 8)}...`}
             </h3>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-neu-text-muted mt-0.5">
               {executions.length} execution{executions.length !== 1 ? 's' : ''}
               {successCount > 0 && (
-                <span className="ml-2 text-green-600">{successCount} passed</span>
+                <span className="ml-2 text-neu-green">{successCount} passed</span>
               )}
               {errorCount > 0 && (
-                <span className="ml-2 text-red-600">{errorCount} failed</span>
+                <span className="ml-2 text-neu-coral">{errorCount} failed</span>
               )}
             </p>
           </div>
         </div>
 
+        {/* Chevron */}
         <svg
-          className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+          className={`w-5 h-5 text-neu-text-muted transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -69,13 +79,15 @@ export function WorkflowGroup({
 
       {/* Executions Grid */}
       {isExpanded && (
-        <div className="p-4 pt-0 border-t border-gray-100">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-            {executions.map((execution) => (
+        <div className="px-5 pb-5 pt-2">
+          <div className="divider-neu mb-5" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {executions.map((execution, index) => (
               <ExecutionCard
                 key={execution.id}
                 execution={execution}
                 onDelete={onDeleteExecution}
+                animationDelay={index}
               />
             ))}
           </div>

@@ -17,7 +17,7 @@ export function AppLayout({ children, fullWidth = false }: AppLayoutProps) {
   const { isCollapsed } = useSidebar();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-neu-bg">
       <Sidebar />
 
       {/* Main content area - adjusts margin based on sidebar state */}

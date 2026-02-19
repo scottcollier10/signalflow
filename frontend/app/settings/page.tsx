@@ -1,5 +1,11 @@
 'use client';
 
+/**
+ * Settings Page
+ * Configure n8n connection, preferences, and data management
+ * With neumorphic design
+ */
+
 import { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout';
 import {
@@ -152,28 +158,28 @@ export default function SettingsPage() {
     <AppLayout>
       <div className="max-w-4xl mx-auto p-6 space-y-8">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="font-display text-2xl font-bold text-neu-text flex items-center gap-2">
             <SettingsIcon className="w-6 h-6" />
             Settings
           </h1>
-          <p className="text-gray-500 mt-1">Configure your SignalFlow experience</p>
+          <p className="text-neu-text-muted mt-1 font-body">Configure your SignalFlow experience</p>
         </div>
 
         {/* n8n Connection */}
-        <section className="bg-white rounded-xl border shadow-sm">
-          <div className="p-6 border-b">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Link className="w-5 h-5 text-orange-500" />
+        <section className="neu-raised overflow-hidden">
+          <div className="p-6 border-b border-neu-shadow-light/30">
+            <h2 className="font-display text-lg font-semibold text-neu-text flex items-center gap-2">
+              <Link className="w-5 h-5 text-neu-orange" />
               n8n Connection
             </h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-neu-text-muted mt-1">
               Connect to your n8n instance for direct execution imports
             </p>
           </div>
 
           <div className="p-6 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-neu-text mb-1">
                 Instance URL
               </label>
               <input
@@ -181,15 +187,15 @@ export default function SettingsPage() {
                 value={n8nUrl}
                 onChange={(e) => setN8nUrl(e.target.value)}
                 placeholder="https://your-instance.app.n8n.cloud"
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-neu-bg border border-neu-shadow-light/30 rounded-lg text-neu-text focus:ring-2 focus:ring-neu-accent focus:border-transparent transition-colors placeholder:text-neu-text-muted/50"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-neu-text-muted mt-1">
                 Your n8n cloud or self-hosted instance URL
               </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-neu-text mb-1">
                 API Key
               </label>
               <div className="relative">
@@ -198,17 +204,17 @@ export default function SettingsPage() {
                   value={n8nApiKey}
                   onChange={(e) => setN8nApiKey(e.target.value)}
                   placeholder="Enter your n8n API key"
-                  className="w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-2 pr-10 bg-neu-bg border border-neu-shadow-light/30 rounded-lg text-neu-text focus:ring-2 focus:ring-neu-accent focus:border-transparent transition-colors placeholder:text-neu-text-muted/50"
                 />
                 <button
                   type="button"
                   onClick={() => setShowApiKey(!showApiKey)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neu-text-muted hover:text-neu-text transition-colors"
                 >
                   {showApiKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-neu-text-muted mt-1">
                 Find this in n8n → Settings → API → Create API Key
               </p>
             </div>
@@ -217,7 +223,7 @@ export default function SettingsPage() {
               <button
                 onClick={testConnection}
                 disabled={connectionStatus === 'testing'}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-lg transition-colors"
+                className="flex items-center gap-2 px-4 py-2 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {connectionStatus === 'testing' ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -228,14 +234,14 @@ export default function SettingsPage() {
               </button>
 
               {connectionStatus === 'success' && (
-                <span className="flex items-center gap-1 text-green-600 text-sm">
+                <span className="flex items-center gap-1 text-neu-green text-sm">
                   <CheckCircle className="w-4 h-4" />
                   {connectionMessage}
                 </span>
               )}
 
               {connectionStatus === 'error' && (
-                <span className="flex items-center gap-1 text-red-600 text-sm">
+                <span className="flex items-center gap-1 text-neu-coral text-sm">
                   <XCircle className="w-4 h-4" />
                   {connectionMessage}
                 </span>
@@ -245,13 +251,13 @@ export default function SettingsPage() {
         </section>
 
         {/* Preferences */}
-        <section className="bg-white rounded-xl border shadow-sm">
-          <div className="p-6 border-b">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Bell className="w-5 h-5 text-blue-500" />
+        <section className="neu-raised overflow-hidden">
+          <div className="p-6 border-b border-neu-shadow-light/30">
+            <h2 className="font-display text-lg font-semibold text-neu-text flex items-center gap-2">
+              <Bell className="w-5 h-5 text-neu-accent" />
               Preferences
             </h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-neu-text-muted mt-1">
               Customize your default views and behavior
             </p>
           </div>
@@ -259,13 +265,13 @@ export default function SettingsPage() {
           <div className="p-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-neu-text mb-1">
                   Default view after import
                 </label>
                 <select
                   value={defaultView}
                   onChange={(e) => setDefaultView(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 bg-neu-bg border border-neu-shadow-light/30 rounded-lg text-neu-text focus:ring-2 focus:ring-neu-accent transition-colors"
                 >
                   <option value="overview">Overview</option>
                   <option value="playback">Playback</option>
@@ -275,13 +281,13 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-neu-text mb-1">
                   Dashboard grouping
                 </label>
                 <select
                   value={dashboardGrouping}
                   onChange={(e) => setDashboardGrouping(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 bg-neu-bg border border-neu-shadow-light/30 rounded-lg text-neu-text focus:ring-2 focus:ring-neu-accent transition-colors"
                 >
                   <option value="workflow">Group by Workflow</option>
                   <option value="date">Group by Date</option>
@@ -290,13 +296,13 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-neu-text mb-1">
                   Default bottleneck tab
                 </label>
                 <select
                   value={defaultBottleneckTab}
                   onChange={(e) => setDefaultBottleneckTab(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 bg-neu-bg border border-neu-shadow-light/30 rounded-lg text-neu-text focus:ring-2 focus:ring-neu-accent transition-colors"
                 >
                   <option value="all">All</option>
                   <option value="severe">Severe</option>
@@ -312,9 +318,9 @@ export default function SettingsPage() {
                   type="checkbox"
                   checked={showScoringExplanations}
                   onChange={(e) => setShowScoringExplanations(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                  className="w-4 h-4 rounded border-neu-shadow-light/50 bg-neu-bg text-neu-accent focus:ring-neu-accent"
                 />
-                <span className="text-sm text-gray-700">Show scoring explanations by default</span>
+                <span className="text-sm text-neu-text">Show scoring explanations by default</span>
               </label>
 
               <label className="flex items-center gap-3 cursor-pointer">
@@ -322,22 +328,22 @@ export default function SettingsPage() {
                   type="checkbox"
                   checked={autoExpandRecommendations}
                   onChange={(e) => setAutoExpandRecommendations(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                  className="w-4 h-4 rounded border-neu-shadow-light/50 bg-neu-bg text-neu-accent focus:ring-neu-accent"
                 />
-                <span className="text-sm text-gray-700">Auto-expand recommendation categories</span>
+                <span className="text-sm text-neu-text">Auto-expand recommendation categories</span>
               </label>
             </div>
 
             <div className="flex items-center gap-3">
               <button
                 onClick={handleSavePreferences}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors"
+                className="flex items-center gap-2 px-4 py-2 btn-primary"
               >
                 <Save className="w-4 h-4" />
                 Save Preferences
               </button>
               {saveMessage && (
-                <span className="text-green-600 text-sm flex items-center gap-1">
+                <span className="text-neu-green text-sm flex items-center gap-1">
                   <CheckCircle className="w-4 h-4" />
                   {saveMessage}
                 </span>
@@ -347,44 +353,44 @@ export default function SettingsPage() {
         </section>
 
         {/* Data Management */}
-        <section className="bg-white rounded-xl border shadow-sm">
-          <div className="p-6 border-b">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Database className="w-5 h-5 text-green-500" />
+        <section className="neu-raised overflow-hidden">
+          <div className="p-6 border-b border-neu-shadow-light/30">
+            <h2 className="font-display text-lg font-semibold text-neu-text flex items-center gap-2">
+              <Database className="w-5 h-5 text-neu-green" />
               Data Management
             </h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-neu-text-muted mt-1">
               Manage your stored execution data
             </p>
           </div>
 
           <div className="p-6">
             <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-2xl font-bold">{dataStats.executions}</div>
-                <div className="text-sm text-gray-500">Stored Executions</div>
+              <div className="neu-inset rounded-lg p-4">
+                <div className="text-2xl font-display font-bold text-neu-text">{dataStats.executions}</div>
+                <div className="text-sm text-neu-text-muted">Stored Executions</div>
               </div>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-2xl font-bold">{dataStats.storageUsed}</div>
-                <div className="text-sm text-gray-500">Estimated Storage</div>
+              <div className="neu-inset rounded-lg p-4">
+                <div className="text-2xl font-display font-bold text-neu-text">{dataStats.storageUsed}</div>
+                <div className="text-sm text-neu-text-muted">Estimated Storage</div>
               </div>
             </div>
 
             <button
               onClick={handleDeleteAllData}
-              className="flex items-center gap-2 px-4 py-2 border border-red-300 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 border border-neu-coral/50 text-neu-coral hover:bg-neu-coral/10 rounded-lg transition-colors"
             >
               <Trash2 className="w-4 h-4" />
               Delete All Executions
             </button>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-neu-text-muted mt-2">
               This permanently removes all execution data. This cannot be undone.
             </p>
           </div>
         </section>
 
         {/* Version Info */}
-        <div className="text-center text-sm text-gray-400 py-4">
+        <div className="text-center text-sm text-neu-text-muted py-4">
           SignalFlow v0.8 • Week 5 Build
         </div>
       </div>

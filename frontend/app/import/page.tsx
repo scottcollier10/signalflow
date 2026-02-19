@@ -3,6 +3,7 @@
 /**
  * Execution Import Page
  * Upload, paste, or fetch n8n execution JSON for analysis
+ * With neumorphic design
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
@@ -301,42 +302,42 @@ export default function ImportPage() {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Import Execution</h1>
-          <p className="mt-1 text-sm text-gray-600">
+          <h1 className="font-display text-2xl font-bold text-neu-text">Import Execution</h1>
+          <p className="mt-1 text-sm text-neu-text-muted font-body">
             Upload, paste, or fetch n8n execution data to analyze workflow performance
           </p>
         </div>
 
         {/* Main Card */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="neu-raised p-6">
           {/* Method Toggle */}
-          <div className="flex gap-2 mb-6">
+          <div className="flex gap-2 mb-6 neu-inset rounded-lg p-1">
             <button
               onClick={() => handleMethodChange('file')}
-              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all ${
                 method === 'file'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'neu-raised text-neu-accent'
+                  : 'text-neu-text-muted hover:text-neu-text'
               }`}
             >
               Upload File
             </button>
             <button
               onClick={() => handleMethodChange('paste')}
-              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all ${
                 method === 'paste'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'neu-raised text-neu-accent'
+                  : 'text-neu-text-muted hover:text-neu-text'
               }`}
             >
               Paste JSON
             </button>
             <button
               onClick={() => handleMethodChange('fetch')}
-              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all ${
                 method === 'fetch'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'neu-raised text-neu-accent'
+                  : 'text-neu-text-muted hover:text-neu-text'
               }`}
             >
               Fetch from n8n
@@ -351,12 +352,12 @@ export default function ImportPage() {
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
               className={`
-                border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
+                border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all
                 ${isDragging
-                  ? 'border-blue-500 bg-blue-50'
+                  ? 'border-neu-accent bg-neu-accent/10'
                   : selectedFile
-                    ? 'border-green-500 bg-green-50'
-                    : 'border-gray-300 hover:border-gray-400'
+                    ? 'border-neu-green bg-neu-green/10'
+                    : 'border-neu-shadow-light/50 hover:border-neu-accent/50 hover:bg-neu-shadow-light/10'
                 }
               `}
             >
@@ -370,27 +371,27 @@ export default function ImportPage() {
 
               {selectedFile ? (
                 <div>
-                  <svg className="mx-auto h-12 w-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="mx-auto h-12 w-12 text-neu-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <p className="mt-2 text-sm font-medium text-gray-900">{selectedFile.name}</p>
-                  <p className="text-xs text-gray-500">{(selectedFile.size / 1024).toFixed(1)} KB</p>
+                  <p className="mt-2 text-sm font-medium text-neu-text">{selectedFile.name}</p>
+                  <p className="text-xs text-neu-text-muted">{(selectedFile.size / 1024).toFixed(1)} KB</p>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleReset(); }}
-                    className="mt-2 text-xs text-red-600 hover:text-red-700"
+                    className="mt-2 text-xs text-neu-coral hover:text-neu-coral/80 transition-colors"
                   >
                     Remove
                   </button>
                 </div>
               ) : (
                 <div>
-                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="mx-auto h-12 w-12 text-neu-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
-                  <p className="mt-2 text-sm text-gray-600">
-                    <span className="font-medium text-blue-600">Click to upload</span> or drag and drop
+                  <p className="mt-2 text-sm text-neu-text-muted">
+                    <span className="font-medium text-neu-accent">Click to upload</span> or drag and drop
                   </p>
-                  <p className="text-xs text-gray-500">JSON files only</p>
+                  <p className="text-xs text-neu-text-muted">JSON files only</p>
                 </div>
               )}
             </div>
@@ -403,9 +404,9 @@ export default function ImportPage() {
                 value={jsonText}
                 onChange={(e) => { setJsonText(e.target.value); setError(null); }}
                 placeholder='{"data":{"resultData":{"runData":...}}}'
-                className="w-full h-64 p-4 border border-gray-300 rounded-lg font-mono text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full h-64 p-4 bg-neu-bg border border-neu-shadow-light/30 rounded-lg font-mono text-sm text-neu-text resize-none focus:ring-2 focus:ring-neu-accent focus:border-neu-accent transition-colors placeholder:text-neu-text-muted/50"
               />
-              <p className="mt-2 text-xs text-gray-500">
+              <p className="mt-2 text-xs text-neu-text-muted">
                 Paste the full n8n execution JSON export
               </p>
             </div>
@@ -416,7 +417,7 @@ export default function ImportPage() {
             <div className="space-y-4">
               {/* n8n Instance URL */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-neu-text mb-1">
                   n8n Instance URL
                 </label>
                 <input
@@ -424,13 +425,13 @@ export default function ImportPage() {
                   value={n8nUrl}
                   onChange={(e) => handleN8nUrlChange(e.target.value)}
                   placeholder="https://n8n-jobbot.onrender.com"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 bg-neu-bg border border-neu-shadow-light/30 rounded-lg text-sm text-neu-text focus:ring-2 focus:ring-neu-accent focus:border-neu-accent transition-colors placeholder:text-neu-text-muted/50"
                 />
               </div>
 
               {/* Execution ID */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-neu-text mb-1">
                   Execution ID
                 </label>
                 <input
@@ -438,16 +439,16 @@ export default function ImportPage() {
                   value={n8nExecutionId}
                   onChange={(e) => { setN8nExecutionId(e.target.value); setError(null); }}
                   placeholder="4350"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 bg-neu-bg border border-neu-shadow-light/30 rounded-lg text-sm text-neu-text focus:ring-2 focus:ring-neu-accent focus:border-neu-accent transition-colors placeholder:text-neu-text-muted/50"
                 />
-                <p className="mt-1 text-xs text-gray-500">
-                  Find this in the execution URL: /executions/<strong>4350</strong>
+                <p className="mt-1 text-xs text-neu-text-muted">
+                  Find this in the execution URL: /executions/<strong className="text-neu-accent">4350</strong>
                 </p>
               </div>
 
               {/* API Key */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-neu-text mb-1">
                   API Key
                 </label>
                 <div className="relative">
@@ -456,12 +457,12 @@ export default function ImportPage() {
                     value={n8nApiKey}
                     onChange={(e) => handleApiKeyChange(e.target.value)}
                     placeholder="n8n_api_..."
-                    className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 pr-10 bg-neu-bg border border-neu-shadow-light/30 rounded-lg text-sm text-neu-text focus:ring-2 focus:ring-neu-accent focus:border-neu-accent transition-colors placeholder:text-neu-text-muted/50"
                   />
                   <button
                     type="button"
                     onClick={() => setShowApiKey(!showApiKey)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neu-text-muted hover:text-neu-text transition-colors"
                   >
                     {showApiKey ? (
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -475,14 +476,14 @@ export default function ImportPage() {
                     )}
                   </button>
                 </div>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-neu-text-muted">
                   Get your API key from n8n Settings → API
                 </p>
               </div>
 
               {/* Saved indicator */}
               {(n8nUrl || n8nApiKey) && (
-                <p className="text-xs text-green-600 flex items-center gap-1">
+                <p className="text-xs text-neu-green flex items-center gap-1">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
@@ -494,14 +495,14 @@ export default function ImportPage() {
 
           {/* Error Message */}
           {error && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="mt-4 p-4 neu-inset border-l-4 border-neu-coral">
               <div className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-neu-coral flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <div>
-                  <p className="text-sm font-medium text-red-800">Import Error</p>
-                  <p className="text-sm text-red-600">{error}</p>
+                  <p className="text-sm font-medium text-neu-coral">Import Error</p>
+                  <p className="text-sm text-neu-text-muted">{error}</p>
                 </div>
               </div>
             </div>
@@ -509,20 +510,20 @@ export default function ImportPage() {
 
           {/* Success Message */}
           {result && (
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="mt-4 p-4 neu-inset border-l-4 border-neu-green">
               <div className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-neu-green flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <div>
-                  <p className="text-sm font-medium text-green-800">Import Successful!</p>
-                  <p className="text-sm text-green-600">
+                  <p className="text-sm font-medium text-neu-green">Import Successful!</p>
+                  <p className="text-sm text-neu-text-muted">
                     Execution ID: {result.execution_id.slice(0, 8)}...
                   </p>
-                  <p className="text-sm text-green-600">
+                  <p className="text-sm text-neu-text-muted">
                     {result.event_count} events • {result.status} • {(result.duration_ms / 1000).toFixed(1)}s
                   </p>
-                  <p className="text-xs text-green-500 mt-1">
+                  <p className="text-xs text-neu-accent mt-1">
                     Redirecting to execution view...
                   </p>
                 </div>
@@ -537,10 +538,10 @@ export default function ImportPage() {
                 onClick={handleFetchFromN8n}
                 disabled={isLoading || !!result}
                 className={`
-                  flex-1 py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2
+                  flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2
                   ${isLoading || result
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                    ? 'bg-neu-shadow-light/30 text-neu-text-muted cursor-not-allowed'
+                    : 'btn-primary'
                   }
                 `}
               >
@@ -568,10 +569,10 @@ export default function ImportPage() {
                 onClick={handleImport}
                 disabled={isLoading || !!result}
                 className={`
-                  flex-1 py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2
+                  flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2
                   ${isLoading || result
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                    ? 'bg-neu-shadow-light/30 text-neu-text-muted cursor-not-allowed'
+                    : 'btn-primary'
                   }
                 `}
               >
@@ -604,7 +605,7 @@ export default function ImportPage() {
                     setN8nExecutionId('');
                   }
                 }}
-                className="py-3 px-4 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+                className="py-3 px-4 rounded-lg font-medium text-neu-text-muted bg-neu-shadow-light/20 hover:bg-neu-shadow-light/30 transition-colors"
               >
                 Clear
               </button>
@@ -614,9 +615,9 @@ export default function ImportPage() {
 
         {/* Help Text */}
         {method === 'fetch' ? (
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <h3 className="text-sm font-medium text-blue-900 mb-2">How to get your n8n API key:</h3>
-            <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+          <div className="mt-6 p-4 neu-flat border-l-4 border-neu-accent">
+            <h3 className="text-sm font-medium text-neu-text mb-2">How to get your n8n API key:</h3>
+            <ol className="text-sm text-neu-text-muted space-y-1 list-decimal list-inside">
               <li>Open your n8n instance</li>
               <li>Go to Settings (gear icon)</li>
               <li>Click on "API" in the sidebar</li>
@@ -625,9 +626,9 @@ export default function ImportPage() {
             </ol>
           </div>
         ) : (
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <h3 className="text-sm font-medium text-blue-900 mb-2">How to export from n8n:</h3>
-            <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+          <div className="mt-6 p-4 neu-flat border-l-4 border-neu-accent">
+            <h3 className="text-sm font-medium text-neu-text mb-2">How to export from n8n:</h3>
+            <ol className="text-sm text-neu-text-muted space-y-1 list-decimal list-inside">
               <li>Open your workflow in n8n</li>
               <li>Go to Executions tab</li>
               <li>Click on the execution you want to analyze</li>
