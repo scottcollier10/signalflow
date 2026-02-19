@@ -633,6 +633,17 @@ async def list_executions(limit: int = 100, status: str = None):
             for w in (workflows_result.data or []):
                 workflow_map[w["id"]] = w
 
+        # Fetch critical paths for duration data
+        execution_ids = [e["id"] for e in executions]
+        critical_path_map = {}
+        if execution_ids:
+            cp_result = supabase.table("critical_paths")\
+                .select("execution_id, total_duration_ms")\
+                .in_("execution_id", execution_ids)\
+                .execute()
+            for cp in (cp_result.data or []):
+                critical_path_map[cp["execution_id"]] = cp.get("total_duration_ms")
+
         # Enrich executions with workflow info and counts
         enriched = []
         for exec in executions:
@@ -648,8 +659,13 @@ async def list_executions(limit: int = 100, status: str = None):
             unique_nodes = set(e["node_id"] for e in events)
             error_count = sum(1 for e in events if e.get("status") == "error")
 
+            # Use critical path duration if available, fallback to stored duration_ms
+            cp_duration = critical_path_map.get(exec["id"])
+            duration_ms = cp_duration if cp_duration is not None else exec.get("duration_ms", 0)
+
             enriched.append({
                 **exec,
+                "duration_ms": duration_ms,
                 "workflow": workflow,
                 "node_count": len(unique_nodes),
                 "error_count": error_count,
@@ -715,6 +731,14 @@ async def get_execution(execution_id: str):
 
         workflow = workflow_result.data[0] if workflow_result.data else None
 
+        # Fetch critical path for accurate duration
+        cp_result = supabase.table("critical_paths")\
+            .select("total_duration_ms")\
+            .eq("execution_id", execution_id)\
+            .execute()
+        cp_duration = cp_result.data[0].get("total_duration_ms") if cp_result.data else None
+        duration_ms = cp_duration if cp_duration is not None else execution.get("duration_ms", 0)
+
         return {
             "id": execution["id"],
             "workflow_id": execution["workflow_id"],
@@ -722,7 +746,7 @@ async def get_execution(execution_id: str):
             "status": execution.get("status"),
             "started_at": execution.get("started_at"),
             "finished_at": execution.get("finished_at"),
-            "duration_ms": execution.get("duration_ms"),
+            "duration_ms": duration_ms,
             "trigger_mode": execution.get("trigger_mode"),
             "workflow": workflow
         }
