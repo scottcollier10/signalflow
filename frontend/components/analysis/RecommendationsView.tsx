@@ -405,16 +405,17 @@ export function RecommendationsView({
           </button>
         </div>
 
-        {/* Export Dropdown */}
+        {/* Optimize Dropdown */}
         <div className="relative">
           <button
             onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-neu-accent to-neu-accent-light text-white rounded-lg text-sm font-medium hover:brightness-110 transition-all shadow-md"
+            className="flex items-center gap-2 px-6 py-3 bg-neu-orange text-neu-bg rounded-neu text-sm font-semibold shadow-neu-raised-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-neu-raised"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path d="M1 4v6h6M23 20v-6h-6" />
+              <path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" />
             </svg>
-            Export
+            Optimize
             <svg className={`w-4 h-4 transition-transform ${exportDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>

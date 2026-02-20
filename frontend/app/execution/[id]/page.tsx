@@ -69,16 +69,8 @@ export default function ExecutionPage({ params }: ExecutionPageProps) {
   const [sortBy, setSortBy] = useState<SortOption>('priority');
   const [nodeFilter, setNodeFilter] = useState<string | null>(null);
 
-  // Handle node filter from bottleneck "View Fix" button
-  const handleNodeFilter = (nodeName: string) => {
-    setNodeFilter(nodeName);
-  };
-
-  // Handle tab change - clears node filter when leaving recommendations
+  // Handle tab change
   const handleTabChange = (tab: TabId) => {
-    if (tab !== 'recommendations') {
-      setNodeFilter(null);
-    }
     setActiveTab(tab);
   };
 
@@ -164,156 +156,150 @@ export default function ExecutionPage({ params }: ExecutionPageProps) {
   };
 
   return (
-    <>
-      {/* Playback tab uses full viewport - ExecutionVisualizer handles its own layout */}
-      {activeTab === 'playback' ? (
-        <ExecutionVisualizer
-          workflowId={executionMeta.workflow_id}
-          executionId={executionId}
-          apiBaseUrl="http://localhost:8001"
-          onBack={() => setActiveTab('overview')}
-          // Pass analysis data to avoid re-fetching
-          initialBottlenecks={analysisData?.bottlenecks?.bottlenecks}
-          initialRecommendations={analysisData?.recommendations?.recommendations}
-          workflowName={executionMeta.workflow_name}
-        />
-      ) : (
-        <AppLayout>
-          <div className="max-w-7xl mx-auto">
-            {/* Header */}
-            <div className="neu-raised mb-6">
-              {/* Breadcrumb */}
-              <div className="px-6 py-3 border-b border-neu-shadow-light/30">
-                <button
-                  onClick={() => router.back()}
-                  className="inline-flex items-center gap-2 text-sm text-neu-text-muted hover:text-neu-accent transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  Back
-                </button>
-              </div>
+    <AppLayout>
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="neu-raised mb-6">
+          {/* Breadcrumb */}
+          <div className="px-6 py-3 border-b border-neu-shadow-light/30">
+            <button
+              onClick={() => router.back()}
+              className="inline-flex items-center gap-2 text-sm text-neu-text-muted hover:text-neu-accent transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back
+            </button>
+          </div>
 
-              {/* Title and metadata */}
-              <div className="px-6 py-5">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div>
-                    <h1 className="font-display text-2xl sm:text-3xl font-bold text-neu-text">
-                      {executionMeta.workflow_name || 'Execution Analysis'}
-                    </h1>
-                    <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-neu-text-muted">
-                      <span className={executionMeta.status === 'success' ? 'badge-success' : 'badge-error'}>
-                        {executionMeta.status === 'success' ? (
-                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                        ) : (
-                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                        {executionMeta.status.charAt(0).toUpperCase() + executionMeta.status.slice(1)}
-                      </span>
-                      {executionMeta.duration_ms && (
-                        <span className="flex items-center gap-1">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          {(executionMeta.duration_ms / 1000).toFixed(2)}s
-                        </span>
-                      )}
-                      <span className="font-mono text-xs bg-neu-shadow-dark/30 px-2 py-0.5 rounded">
-                        {executionId.slice(0, 8)}...
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Quick stats */}
-                  <div className="flex flex-wrap gap-2">
-                    <span className="badge-info">
-                      {counts.criticalPath} critical nodes
+          {/* Title and metadata */}
+          <div className="px-6 py-5">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="font-display text-2xl sm:text-3xl font-bold text-neu-text">
+                  {executionMeta.workflow_name || 'Execution Analysis'}
+                </h1>
+                <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-neu-text-muted">
+                  <span className={executionMeta.status === 'success' ? 'badge-success' : 'badge-error'}>
+                    {executionMeta.status === 'success' ? (
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    ) : (
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                    {executionMeta.status.charAt(0).toUpperCase() + executionMeta.status.slice(1)}
+                  </span>
+                  {executionMeta.duration_ms && (
+                    <span className="flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {(executionMeta.duration_ms / 1000).toFixed(2)}s
                     </span>
-                    <span className="badge-warning">
-                      {counts.bottlenecks} bottlenecks
-                    </span>
-                    <span className="px-3 py-1 bg-neu-accent/15 text-neu-accent rounded-full text-xs font-medium">
-                      {counts.recommendations} recommendations
-                    </span>
-                  </div>
+                  )}
+                  <span className="font-mono text-xs bg-neu-shadow-dark/30 px-2 py-0.5 rounded">
+                    {executionId.slice(0, 8)}...
+                  </span>
                 </div>
               </div>
 
-              {/* Tabs */}
-              <div className="px-6">
-                <ExecutionTabs
-                  activeTab={activeTab}
-                  onTabChange={handleTabChange}
-                  counts={counts}
-                />
+              {/* Quick stats */}
+              <div className="flex flex-wrap gap-2">
+                <span className="badge-info">
+                  {counts.criticalPath} critical nodes
+                </span>
+                <span className="badge-warning">
+                  {counts.bottlenecks} bottlenecks
+                </span>
+                <span className="px-3 py-1 bg-neu-accent/15 text-neu-accent rounded-full text-xs font-medium">
+                  {counts.recommendations} recommendations
+                </span>
               </div>
             </div>
+          </div>
 
-            {/* Tab Content */}
-            <div className="mt-6">
-              {activeTab === 'overview' && analysisData && (
-                <AnalysisOverview
-                  data={analysisData}
-                  onViewEvidence={handleViewEvidence}
-                  onTabChange={handleTabChange}
-                />
-              )}
-
-              {activeTab === 'critical-path' && analysisData && (
-                <CriticalPathView data={analysisData.criticalPath} />
-              )}
-
-              {activeTab === 'bottlenecks' && analysisData && (
-                <BottleneckView
-                  data={analysisData.bottlenecks}
-                  onTabChange={handleTabChange}
-                  onNodeFilter={handleNodeFilter}
-                />
-              )}
-
-              {activeTab === 'errors' && analysisData && (
-                <ErrorClustersSection data={analysisData.errors} />
-              )}
-
-              {activeTab === 'recommendations' && analysisData && (
-                <RecommendationsView
-                  data={analysisData.recommendations}
-                  filters={filters}
-                  sortBy={sortBy}
-                  onFilterChange={setFilters}
-                  onSortChange={setSortBy}
-                  onViewEvidence={handleViewEvidence}
-                  nodeFilter={nodeFilter}
-                  onClearNodeFilter={() => setNodeFilter(null)}
-                  exportData={{
-                    workflowName: executionMeta?.workflow_name || `Workflow ${executionMeta?.workflow_id?.slice(0, 8) || 'Unknown'}`,
-                    workflowId: executionMeta?.workflow_id || '',
-                    executionId: executionId,
-                    durationMs: executionMeta?.duration_ms || analysisData.criticalPath.summary.total_duration_ms,
-                    nodeCount: analysisData.criticalPath.summary.node_count,
-                    criticalPathNodes: analysisData.criticalPath.summary.node_count,
-                    criticalPathDurationMs: analysisData.criticalPath.summary.total_duration_ms,
-                    bottlenecks: analysisData.bottlenecks.bottlenecks,
-                    errors: analysisData.errors.clusters,
-                  }}
-                />
-              )}
-            </div>
-
-            {/* Evidence Drawer */}
-            <EvidenceDrawer
-              open={evidenceDrawerOpen}
-              recommendation={selectedRecommendation}
-              onClose={handleCloseDrawer}
+          {/* Tabs */}
+          <div className="px-6">
+            <ExecutionTabs
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+              counts={counts}
             />
           </div>
-        </AppLayout>
-      )}
-    </>
+        </div>
+
+        {/* Tab Content */}
+        <div className="mt-6">
+          {activeTab === 'overview' && analysisData && (
+            <AnalysisOverview
+              data={analysisData}
+              onViewEvidence={handleViewEvidence}
+              onTabChange={handleTabChange}
+            />
+          )}
+
+          {activeTab === 'playback' && (
+            <ExecutionVisualizer
+              workflowId={executionMeta.workflow_id}
+              executionId={executionId}
+              apiBaseUrl="http://localhost:8001"
+              embedded={true}
+              initialBottlenecks={analysisData?.bottlenecks?.bottlenecks}
+              initialRecommendations={analysisData?.recommendations?.recommendations}
+              workflowName={executionMeta.workflow_name}
+            />
+          )}
+
+          {activeTab === 'critical-path' && analysisData && (
+            <CriticalPathView data={analysisData.criticalPath} />
+          )}
+
+          {activeTab === 'bottlenecks' && analysisData && (
+            <BottleneckView
+              data={analysisData.bottlenecks}
+            />
+          )}
+
+          {activeTab === 'errors' && analysisData && (
+            <ErrorClustersSection data={analysisData.errors} />
+          )}
+
+          {activeTab === 'recommendations' && analysisData && (
+            <RecommendationsView
+              data={analysisData.recommendations}
+              filters={filters}
+              sortBy={sortBy}
+              onFilterChange={setFilters}
+              onSortChange={setSortBy}
+              onViewEvidence={handleViewEvidence}
+              nodeFilter={nodeFilter}
+              onClearNodeFilter={() => setNodeFilter(null)}
+              exportData={{
+                workflowName: executionMeta?.workflow_name || `Workflow ${executionMeta?.workflow_id?.slice(0, 8) || 'Unknown'}`,
+                workflowId: executionMeta?.workflow_id || '',
+                executionId: executionId,
+                durationMs: executionMeta?.duration_ms || analysisData.criticalPath.summary.total_duration_ms,
+                nodeCount: analysisData.criticalPath.summary.node_count,
+                criticalPathNodes: analysisData.criticalPath.summary.node_count,
+                criticalPathDurationMs: analysisData.criticalPath.summary.total_duration_ms,
+                bottlenecks: analysisData.bottlenecks.bottlenecks,
+                errors: analysisData.errors.clusters,
+              }}
+            />
+          )}
+        </div>
+
+        {/* Evidence Drawer */}
+        <EvidenceDrawer
+          open={evidenceDrawerOpen}
+          recommendation={selectedRecommendation}
+          onClose={handleCloseDrawer}
+        />
+      </div>
+    </AppLayout>
   );
 }

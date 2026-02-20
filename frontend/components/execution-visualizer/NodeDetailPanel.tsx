@@ -3,6 +3,7 @@
 /**
  * Node Detail Panel
  * Slide-in panel showing bottleneck details and fix prompt generator
+ * Dark neumorphic styling
  */
 
 import { useState } from 'react';
@@ -86,24 +87,24 @@ export function NodeDetailPanel({
 
   const severityConfig: Record<string, { color: string; bgColor: string; borderColor: string }> = {
     severe: {
-      color: 'text-red-600',
-      bgColor: 'bg-red-50',
-      borderColor: 'border-red-200'
+      color: 'text-neu-coral',
+      bgColor: 'bg-neu-coral/10',
+      borderColor: 'border-neu-coral/30'
     },
     high: {
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50',
-      borderColor: 'border-orange-200'
+      color: 'text-neu-orange',
+      bgColor: 'bg-neu-orange/10',
+      borderColor: 'border-neu-orange/30'
     },
     medium: {
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-50',
-      borderColor: 'border-yellow-200'
+      color: 'text-neu-yellow',
+      bgColor: 'bg-neu-yellow/10',
+      borderColor: 'border-neu-yellow/30'
     },
     low: {
-      color: 'text-gray-600',
-      bgColor: 'bg-gray-50',
-      borderColor: 'border-gray-200'
+      color: 'text-neu-text-muted',
+      bgColor: 'bg-neu-shadow-light/10',
+      borderColor: 'border-neu-shadow-light/30'
     }
   };
 
@@ -117,20 +118,20 @@ export function NodeDetailPanel({
   const varianceScore = bottleneck ? Math.round(bottleneck.factors.variance_factor * 10) : 0;
 
   return (
-    <div className="absolute top-0 right-0 h-full w-96 bg-white shadow-2xl border-l z-20 flex flex-col animate-slide-in">
+    <div className="absolute top-0 right-0 h-full w-96 bg-neu-bg shadow-2xl border-l border-neu-shadow-light/30 z-20 flex flex-col animate-slide-in">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-gray-50">
+      <div className="flex items-center justify-between p-4 border-b border-neu-shadow-light/30 neu-raised-sm">
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-lg truncate">
+          <h3 className="font-semibold text-lg truncate text-neu-text">
             {node.data?.label || node.id}
           </h3>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-neu-text-muted">
             {node.data?.nodeType || 'Unknown type'}
           </p>
         </div>
         <button
           onClick={onClose}
-          className="p-2 hover:bg-gray-200 rounded-lg transition-colors ml-2 flex-shrink-0"
+          className="p-2 hover:bg-neu-shadow-light/20 rounded-lg transition-colors ml-2 flex-shrink-0 text-neu-text-muted hover:text-neu-text"
           aria-label="Close panel"
         >
           <X className="w-5 h-5" />
@@ -142,12 +143,12 @@ export function NodeDetailPanel({
 
         {/* Duration */}
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-gray-100 rounded-lg">
-            <Clock className="w-5 h-5 text-gray-600" />
+          <div className="p-2 bg-neu-shadow-light/20 rounded-lg">
+            <Clock className="w-5 h-5 text-neu-text-muted" />
           </div>
           <div>
-            <div className="text-sm text-gray-500">Duration</div>
-            <div className="font-semibold text-lg">
+            <div className="text-sm text-neu-text-muted">Duration</div>
+            <div className="font-semibold text-lg text-neu-text">
               {typeof node.data?.duration === 'number'
                 ? formatDuration(node.data.duration)
                 : 'N/A'}
@@ -157,7 +158,7 @@ export function NodeDetailPanel({
 
         {/* Bottleneck Score */}
         {bottleneck ? (
-          <div className={`rounded-lg border p-4 ${config.bgColor} ${config.borderColor}`}>
+          <div className={`rounded-xl border p-4 ${config.bgColor} ${config.borderColor}`}>
             <div className="flex items-center justify-between mb-3">
               <div className={`flex items-center gap-2 ${config.color}`}>
                 <AlertTriangle className="w-5 h-5" />
@@ -174,25 +175,25 @@ export function NodeDetailPanel({
                 label="Duration Factor"
                 score={durationScore}
                 maxScore={40}
-                color={config.color}
+                severity={severity}
               />
               <ScoreBar
                 label="Position Factor"
                 score={positionScore}
                 maxScore={30}
-                color={config.color}
+                severity={severity}
               />
               <ScoreBar
                 label="Frequency Factor"
                 score={frequencyScore}
                 maxScore={20}
-                color={config.color}
+                severity={severity}
               />
               <ScoreBar
                 label="Variance Factor"
                 score={varianceScore}
                 maxScore={10}
-                color={config.color}
+                severity={severity}
               />
             </div>
 
@@ -204,17 +205,17 @@ export function NodeDetailPanel({
             )}
 
             {/* Total duration context */}
-            <div className="mt-3 pt-3 border-t border-current/10 text-sm text-gray-600">
+            <div className="mt-3 pt-3 border-t border-neu-shadow-light/20 text-sm text-neu-text-muted">
               Total node time: {formatDuration(bottleneck.total_duration_ms)}
             </div>
           </div>
         ) : (
-          <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-            <div className="flex items-center gap-2 text-green-700">
+          <div className="rounded-xl border border-neu-green/30 bg-neu-green/10 p-4">
+            <div className="flex items-center gap-2 text-neu-green">
               <CheckCircle className="w-5 h-5" />
               <span className="font-medium">No bottleneck detected</span>
             </div>
-            <p className="text-sm text-green-600 mt-2">
+            <p className="text-sm text-neu-green/80 mt-2">
               This node is performing within normal parameters.
             </p>
           </div>
@@ -223,26 +224,26 @@ export function NodeDetailPanel({
         {/* Recommendations */}
         {recommendations.length > 0 && (
           <div>
-            <h4 className="font-semibold mb-3 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-purple-500" />
+            <h4 className="font-semibold mb-3 flex items-center gap-2 text-neu-text">
+              <TrendingUp className="w-5 h-5 text-neu-accent" />
               Recommendations ({recommendations.length})
             </h4>
             <div className="space-y-3">
               {recommendations.map((rec, index) => (
-                <div key={rec.id || index} className="rounded-lg border p-3 bg-gray-50 hover:bg-gray-100 transition-colors">
-                  <div className="font-medium text-sm">{rec.title}</div>
-                  <p className="text-xs text-gray-600 mt-1 line-clamp-2">{rec.description}</p>
+                <div key={rec.id || index} className="rounded-xl border border-neu-shadow-light/30 p-3 bg-neu-shadow-dark/30 hover:bg-neu-shadow-light/10 transition-colors">
+                  <div className="font-medium text-sm text-neu-text">{rec.title}</div>
+                  <p className="text-xs text-neu-text-muted mt-1 line-clamp-2">{rec.description}</p>
                   <div className="flex items-center gap-2 mt-2">
                     {rec.time_saved_ms && (
-                      <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded">
+                      <span className="text-xs text-neu-green font-medium bg-neu-green/10 px-2 py-0.5 rounded">
                         Save {formatDuration(rec.time_saved_ms)}
                       </span>
                     )}
                     <span className={`text-xs px-2 py-0.5 rounded ${
-                      rec.impact === 'CRITICAL' ? 'bg-red-100 text-red-700' :
-                      rec.impact === 'HIGH' ? 'bg-orange-100 text-orange-700' :
-                      rec.impact === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-gray-100 text-gray-700'
+                      rec.impact === 'CRITICAL' ? 'bg-neu-coral/10 text-neu-coral' :
+                      rec.impact === 'HIGH' ? 'bg-neu-orange/10 text-neu-orange' :
+                      rec.impact === 'MEDIUM' ? 'bg-neu-yellow/10 text-neu-yellow' :
+                      'bg-neu-shadow-light/20 text-neu-text-muted'
                     }`}>
                       {rec.impact}
                     </span>
@@ -254,7 +255,7 @@ export function NodeDetailPanel({
         )}
 
         {recommendations.length === 0 && bottleneck && (
-          <div className="text-sm text-gray-500 bg-gray-50 rounded-lg p-3">
+          <div className="text-sm text-neu-text-muted bg-neu-shadow-dark/30 rounded-xl p-3 border border-neu-shadow-light/20">
             No specific recommendations for this node.
             Check the Recommendations tab for workflow-wide suggestions.
           </div>
@@ -262,12 +263,12 @@ export function NodeDetailPanel({
       </div>
 
       {/* Footer - Action Buttons */}
-      <div className="p-4 border-t bg-gray-50 space-y-2">
+      <div className="p-4 border-t border-neu-shadow-light/30 neu-raised-sm space-y-2">
         {/* Primary: Copy Fix Prompt (only for bottleneck nodes) */}
         {bottleneck && (
           <button
             onClick={handleCopyPrompt}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-neu-accent hover:bg-neu-accent-light text-neu-bg rounded-xl font-medium transition-colors shadow-neu-raised-sm"
           >
             {copied ? (
               <>
@@ -286,7 +287,7 @@ export function NodeDetailPanel({
         {/* Secondary: Copy Node Config */}
         <button
           onClick={handleCopyNodeConfig}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-lg text-sm transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-neu-shadow-light/30 hover:bg-neu-shadow-light/10 text-neu-text-muted hover:text-neu-text rounded-xl text-sm transition-colors"
         >
           {configCopied ? (
             <>
@@ -301,7 +302,7 @@ export function NodeDetailPanel({
           )}
         </button>
 
-        <p className="text-xs text-gray-500 text-center">
+        <p className="text-xs text-neu-text-muted text-center">
           {bottleneck
             ? 'Generate a targeted prompt or copy node config for Claude Code'
             : 'Copy node configuration to share with Claude Code'}
@@ -316,29 +317,42 @@ function ScoreBar({
   label,
   score,
   maxScore,
-  color
+  severity
 }: {
   label: string;
   score: number;
   maxScore: number;
-  color: string;
+  severity: string;
 }) {
   const percentage = (score / maxScore) * 100;
+
+  const getBarColor = () => {
+    switch (severity) {
+      case 'severe': return 'bg-neu-coral';
+      case 'high': return 'bg-neu-orange';
+      case 'medium': return 'bg-neu-yellow';
+      default: return 'bg-neu-shadow-light';
+    }
+  };
+
+  const getTextColor = () => {
+    switch (severity) {
+      case 'severe': return 'text-neu-coral';
+      case 'high': return 'text-neu-orange';
+      case 'medium': return 'text-neu-yellow';
+      default: return 'text-neu-text-muted';
+    }
+  };
 
   return (
     <div>
       <div className="flex justify-between mb-1">
-        <span className="text-gray-700">{label}</span>
-        <span className={`font-medium ${color}`}>{score}/{maxScore}</span>
+        <span className="text-neu-text-muted">{label}</span>
+        <span className={`font-medium ${getTextColor()}`}>{score}/{maxScore}</span>
       </div>
-      <div className="w-full bg-white/50 rounded-full h-2 overflow-hidden">
+      <div className="w-full bg-neu-shadow-dark rounded-full h-2 overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all duration-300 ${
-            color.includes('red') ? 'bg-red-500' :
-            color.includes('orange') ? 'bg-orange-500' :
-            color.includes('yellow') ? 'bg-yellow-500' :
-            'bg-gray-500'
-          }`}
+          className={`h-full rounded-full transition-all duration-300 ${getBarColor()}`}
           style={{ width: `${percentage}%` }}
         />
       </div>

@@ -76,30 +76,30 @@ const getNodeBottleneck = (node: ExecutionFlowNode, bottlenecks: Bottleneck[]): 
   });
 };
 
-// Severity Legend component
+// Severity Legend component - Dark neumorphic theme
 function SeverityLegend() {
   return (
-    <div className="bg-white/95 backdrop-blur rounded-lg shadow-lg p-3 text-sm">
-      <div className="font-medium mb-2 text-gray-700">Bottleneck Severity</div>
+    <div className="neu-raised-sm backdrop-blur rounded-lg p-3 text-sm">
+      <div className="font-medium mb-2 text-neu-text">Bottleneck Severity</div>
       <div className="space-y-1.5">
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded border-2 border-red-500 bg-red-50 shadow-sm" style={{ boxShadow: '0 0 4px rgba(239, 68, 68, 0.4)' }} />
-          <span className="text-gray-600">Severe (90-100)</span>
+          <div className="w-4 h-4 rounded bg-neu-coral" style={{ boxShadow: '0 0 6px rgba(240, 139, 122, 0.5)' }} />
+          <span className="text-neu-text-muted">Severe (90-100)</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded border-2 border-orange-500 bg-orange-50 shadow-sm" style={{ boxShadow: '0 0 4px rgba(249, 115, 22, 0.4)' }} />
-          <span className="text-gray-600">High (70-89)</span>
+          <div className="w-4 h-4 rounded bg-neu-orange" style={{ boxShadow: '0 0 6px rgba(240, 149, 106, 0.5)' }} />
+          <span className="text-neu-text-muted">High (70-89)</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded border-2 border-yellow-500 bg-yellow-50" />
-          <span className="text-gray-600">Medium (50-69)</span>
+          <div className="w-4 h-4 rounded bg-neu-yellow" />
+          <span className="text-neu-text-muted">Medium (50-69)</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded border-2 border-gray-400 bg-gray-50" />
-          <span className="text-gray-600">Low (0-49)</span>
+          <div className="w-4 h-4 rounded bg-neu-shadow-light" />
+          <span className="text-neu-text-muted">Low (0-49)</span>
         </div>
       </div>
-      <div className="mt-3 pt-2 border-t text-xs text-gray-500">
+      <div className="mt-3 pt-2 border-t border-neu-shadow-light/30 text-xs text-neu-text-muted">
         Click any node to see details
       </div>
     </div>
@@ -207,23 +207,23 @@ export function WorkflowCanvas({
         fitView
         minZoom={0.1}
         maxZoom={2}
+        style={{ backgroundColor: '#1e2028' }}
         defaultEdgeOptions={{
           type: 'default',
           animated: false,
-          style: { stroke: '#94a3b8', strokeWidth: 2 },
+          style: { stroke: '#a89be0', strokeWidth: 2 },
         }}
       >
-        <Background color="#aaa" gap={16} />
-        <Controls />
+        <Background color="#282c38" gap={16} />
+        <Controls className="react-flow-controls-dark" />
         <MiniMap
           nodeColor={getMinimapColor}
           nodeStrokeWidth={3}
           zoomable
           pannable
+          maskColor="rgba(30, 32, 40, 0.8)"
+          style={{ backgroundColor: '#1e2028' }}
         />
-        <Panel position="top-left" className="bg-white rounded-lg shadow-lg p-3">
-          <div className="text-sm font-medium text-gray-700">Workflow Execution</div>
-        </Panel>
 
         {/* Severity Legend - only show when bottlenecks exist */}
         {hasBottlenecks && (

@@ -163,7 +163,7 @@ export function ExecutionCard({ execution, onDelete, showWorkflow = false, anima
       <div className="flex items-center gap-3">
         <Link
           href={`/execution/${execution.id}`}
-          className="btn-primary flex-1 text-center"
+          className="flex-1 text-center px-6 py-3 rounded-neu font-semibold border-2 border-neu-accent bg-neu-shadow-light text-neu-accent transition-all duration-300 hover:-translate-y-0.5 hover:bg-neu-accent/10"
         >
           View Analysis
         </Link>

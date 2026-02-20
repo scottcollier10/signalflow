@@ -12,24 +12,12 @@ type SeverityFilter = 'all' | 'severe' | 'high' | 'medium' | 'low';
 
 interface BottleneckViewProps {
   data: BottlenecksResponse;
-  onTabChange?: (tab: 'overview' | 'critical-path' | 'bottlenecks' | 'errors' | 'recommendations') => void;
-  onNodeFilter?: (nodeName: string) => void;
 }
 
-export function BottleneckView({ data, onTabChange, onNodeFilter }: BottleneckViewProps) {
+export function BottleneckView({ data }: BottleneckViewProps) {
   const { bottlenecks, summary } = data;
   const [activeFilter, setActiveFilter] = useState<SeverityFilter>('all');
   const [showScoringInfo, setShowScoringInfo] = useState(false);
-
-  // Handle "View Fix" button click
-  const handleViewFix = (nodeName: string) => {
-    if (onNodeFilter) {
-      onNodeFilter(nodeName);
-    }
-    if (onTabChange) {
-      onTabChange('recommendations');
-    }
-  };
 
   // Calculate counts
   const severityCounts = {
@@ -201,7 +189,6 @@ export function BottleneckView({ data, onTabChange, onNodeFilter }: BottleneckVi
             <BottleneckCard
               key={bottleneck.node_id}
               bottleneck={bottleneck}
-              onViewFix={bottleneck.has_recommendations ? () => handleViewFix(bottleneck.node_name) : undefined}
             />
           ))}
         </div>
@@ -363,14 +350,9 @@ function SeverityCard({
   );
 }
 
-function BottleneckCard({ bottleneck, onViewFix }: { bottleneck: Bottleneck; onViewFix?: () => void }) {
+function BottleneckCard({ bottleneck }: { bottleneck: Bottleneck }) {
   return (
-    <div className={`neu-inset p-4 border-l-4 ${
-      bottleneck.severity === 'severe' ? 'border-neu-coral' :
-      bottleneck.severity === 'high' ? 'border-neu-orange' :
-      bottleneck.severity === 'medium' ? 'border-yellow-500' :
-      'border-neu-green'
-    }`}>
+    <div className="neu-inset p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -407,25 +389,6 @@ function BottleneckCard({ bottleneck, onViewFix }: { bottleneck: Bottleneck; onV
           />
         </div>
       </div>
-
-      {/* View Fix Button */}
-      {onViewFix && (
-        <div className="mt-3">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onViewFix();
-            }}
-            className="w-full btn-primary text-sm flex items-center justify-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            View Fix
-          </button>
-        </div>
-      )}
 
       {bottleneck.is_on_critical_path && (
         <div className="mt-3 pt-3 border-t border-neu-shadow-light/30">

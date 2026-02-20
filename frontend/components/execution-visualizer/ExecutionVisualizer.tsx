@@ -29,6 +29,8 @@ interface ExecutionVisualizerProps {
   initialBottlenecks?: Bottleneck[];
   initialRecommendations?: Recommendation[];
   workflowName?: string;
+  // When true, renders as embedded tab content (no header, fixed height)
+  embedded?: boolean;
 }
 
 export function ExecutionVisualizer({
@@ -39,6 +41,7 @@ export function ExecutionVisualizer({
   initialBottlenecks,
   initialRecommendations,
   workflowName: initialWorkflowName,
+  embedded = false,
 }: ExecutionVisualizerProps) {
   const [data, setData] = useState<ExecutionData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -204,10 +207,10 @@ export function ExecutionVisualizer({
   // Loading state
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gray-50">
+      <div className={`${embedded ? 'h-[600px]' : 'h-full'} flex items-center justify-center bg-neu-bg rounded-xl`}>
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-          <p className="mt-4 text-gray-600">Loading execution data...</p>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-neu-accent"></div>
+          <p className="mt-4 text-neu-text-muted">Loading execution data...</p>
         </div>
       </div>
     );
@@ -216,16 +219,16 @@ export function ExecutionVisualizer({
   // Error state
   if (error || !data) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gray-50">
+      <div className={`${embedded ? 'h-[600px]' : 'h-full'} flex items-center justify-center bg-neu-bg rounded-xl`}>
         <div className="text-center max-w-md">
-          <svg className="mx-auto h-12 w-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="mx-auto h-12 w-12 text-neu-coral" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <h3 className="mt-4 text-lg font-medium text-gray-900">Failed to load execution</h3>
-          <p className="mt-2 text-sm text-gray-600">{error || 'Unknown error'}</p>
+          <h3 className="mt-4 text-lg font-medium text-neu-text">Failed to load execution</h3>
+          <p className="mt-2 text-sm text-neu-text-muted">{error || 'Unknown error'}</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            className="mt-4 px-4 py-2 bg-neu-accent text-white rounded-lg hover:bg-neu-accent-light"
           >
             Retry
           </button>
@@ -238,16 +241,126 @@ export function ExecutionVisualizer({
   const selectedBottleneck = selectedNode ? getNodeBottleneck(selectedNode) : null;
   const selectedRecommendations = selectedNode ? getNodeRecommendations(selectedNode) : [];
 
+  // Embedded mode: renders as tab content with fixed height
+  if (embedded) {
+    return (
+      <div className="flex flex-col bg-neu-bg rounded-xl overflow-hidden">
+        {/* Compact Header with metadata */}
+        <div className="neu-raised-sm px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-4 text-sm text-neu-text-muted">
+            <span className="flex items-center gap-1.5">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              {data.node_count} nodes
+            </span>
+            <span className="flex items-center gap-1.5">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              {data.event_count} events
+            </span>
+            {bottlenecks.length > 0 && (
+              <span className="flex items-center gap-1.5 text-neu-orange font-medium">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                {bottlenecks.length} bottlenecks
+              </span>
+            )}
+            <span className={`flex items-center gap-1.5 font-medium ${
+              data.status === 'success' ? 'text-neu-green' :
+              data.status === 'error' ? 'text-neu-coral' :
+              'text-neu-text-muted'
+            }`}>
+              {data.status === 'success' && (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              )}
+              {data.status === 'error' && (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              )}
+              {data.status}
+            </span>
+            {data.duration_ms && (
+              <span className="flex items-center gap-1.5">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {(data.duration_ms / 1000).toFixed(2)}s
+              </span>
+            )}
+          </div>
+
+          {/* Bottleneck Severity Legend */}
+          <div className="flex items-center gap-3 text-xs">
+            <span className="text-neu-text-muted">Severity:</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded bg-neu-coral"></div>
+              <span className="text-neu-text-muted">Severe</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded bg-neu-orange"></div>
+              <span className="text-neu-text-muted">High</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded bg-neu-yellow"></div>
+              <span className="text-neu-text-muted">Medium</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded bg-neu-green"></div>
+              <span className="text-neu-text-muted">Low</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Canvas - Fixed height */}
+        <div className="h-[500px] overflow-hidden relative bg-neu-shadow-dark">
+          <WorkflowCanvas
+            nodes={updatedNodes}
+            edges={edges}
+            bottlenecks={bottlenecks}
+            onNodeClick={handleNodeClick}
+            selectedNodeId={selectedNode?.id || null}
+          />
+
+          {/* Node Detail Panel */}
+          {showNodePanel && selectedNode && (
+            <NodeDetailPanel
+              node={selectedNode}
+              bottleneck={selectedBottleneck}
+              recommendations={selectedRecommendations}
+              onClose={handleClosePanel}
+              executionId={executionId}
+              workflowName={workflowName || `Workflow ${workflowId.slice(0, 8)}`}
+            />
+          )}
+        </div>
+
+        {/* Playback Controls */}
+        <PlaybackControls
+          state={playbackState}
+          controls={controls}
+          totalEvents={data.events.length}
+        />
+      </div>
+    );
+  }
+
+  // Full-page mode (standalone, outside tab system)
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      {/* Header */}
-      <header className="flex-shrink-0 bg-white border-b px-6 py-4 shadow-sm">
+    <div className="h-full flex flex-col bg-neu-bg">
+      {/* Playback Header */}
+      <header className="flex-shrink-0 neu-raised-sm px-6 py-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             {onBack && (
               <button
                 onClick={onBack}
-                className="p-2 -ml-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 -ml-2 text-neu-text-muted hover:text-neu-accent hover:bg-neu-shadow-light/20 rounded-lg transition-colors"
                 aria-label="Go back"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -256,10 +369,10 @@ export function ExecutionVisualizer({
               </button>
             )}
             <div>
-              <h1 className="text-xl font-bold text-gray-900">
+              <h1 className="text-xl font-display font-bold text-neu-text">
                 Execution Playback
               </h1>
-            <div className="mt-1 flex items-center gap-4 text-sm text-gray-600">
+            <div className="mt-1 flex items-center gap-4 text-sm text-neu-text-muted">
               <span className="flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -273,7 +386,7 @@ export function ExecutionVisualizer({
                 {data.event_count} events
               </span>
               {bottlenecks.length > 0 && (
-                <span className="flex items-center gap-1 text-orange-600 font-medium">
+                <span className="flex items-center gap-1 text-neu-orange font-medium">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
@@ -281,9 +394,9 @@ export function ExecutionVisualizer({
                 </span>
               )}
               <span className={`flex items-center gap-1 font-medium ${
-                data.status === 'success' ? 'text-green-600' :
-                data.status === 'error' ? 'text-red-600' :
-                'text-gray-600'
+                data.status === 'success' ? 'text-neu-green' :
+                data.status === 'error' ? 'text-neu-coral' :
+                'text-neu-text-muted'
               }`}>
                 {data.status === 'success' && (
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -310,42 +423,23 @@ export function ExecutionVisualizer({
           </div>
 
           <div className="flex items-center gap-3">
-            {onBack ? (
+            {onBack && (
               <button
                 onClick={onBack}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium"
+                className="btn-primary flex items-center gap-2 text-sm"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
                 Back to Analysis
               </button>
-            ) : (
-              <a
-                href={`/execution/${executionId}`}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                View Analysis
-              </a>
             )}
-            <a
-              href="/dashboard"
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 text-sm font-medium"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
-              Dashboard
-            </a>
           </div>
         </div>
       </header>
 
       {/* Canvas */}
-      <div className="flex-1 min-h-0 overflow-hidden relative">
+      <div className="flex-1 min-h-0 overflow-hidden relative bg-neu-shadow-dark">
         <WorkflowCanvas
           nodes={updatedNodes}
           edges={edges}

@@ -228,3 +228,72 @@
     text-wrap: balance;
   }
 }
+
+/* ========================================
+   REACT FLOW DARK MODE OVERRIDES
+   ======================================== */
+
+/* Dark mode controls */
+.react-flow-controls-dark .react-flow__controls-button {
+  background: #1e2028 !important;
+  color: #d8d8e0 !important;
+  border-color: #282c38 !important;
+  box-shadow: 3px 3px 6px #14161c, -3px -3px 6px #282c38;
+  border-radius: 8px !important;
+}
+
+.react-flow-controls-dark .react-flow__controls-button:hover {
+  background: #282c38 !important;
+}
+
+.react-flow-controls-dark .react-flow__controls-button svg {
+  fill: #d8d8e0 !important;
+}
+
+/* Node styling */
+.react-flow__node {
+  background: #1e2028 !important;
+  border: 2px solid #282c38 !important;
+  color: #d8d8e0 !important;
+  box-shadow: 5px 5px 10px #14161c, -5px -5px 10px #282c38;
+  border-radius: 12px !important;
+  padding: 12px !important;
+}
+
+.react-flow__node.selected {
+  border-color: #a89be0 !important;
+  box-shadow: 0 0 0 2px #a89be0, 5px 5px 10px #14161c !important;
+}
+
+/* Edge styling */
+.react-flow__edge-path {
+  stroke: #a89be0 !important;
+  stroke-width: 2 !important;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #c4b8f0 !important;
+  stroke-width: 3 !important;
+}
+
+/* Handle styling */
+.react-flow__handle {
+  background: #a89be0 !important;
+  border-color: #1e2028 !important;
+}
+
+/* MiniMap styling */
+.react-flow__minimap {
+  background: #1e2028 !important;
+  border: 1px solid #282c38 !important;
+  border-radius: 8px !important;
+}
+
+/* Attribution */
+.react-flow__attribution {
+  background: transparent !important;
+}
+
+.react-flow__attribution a {
+  color: #4a4e5a !important;
+}

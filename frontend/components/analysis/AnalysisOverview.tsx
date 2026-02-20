@@ -10,7 +10,6 @@ import { useState } from 'react';
 import {
   AnalysisData,
   Recommendation,
-  OptimizationVerdict,
   formatDuration,
   getSeverityColors,
   getImpactColors,
@@ -26,106 +25,14 @@ export function AnalysisOverview({ data, onViewEvidence, onTabChange }: Analysis
   const { criticalPath, bottlenecks, errors, recommendations } = data;
   const [showScoringLegend, setShowScoringLegend] = useState(false);
 
-  // Get optimization verdict
-  const verdict = bottlenecks.verdict;
-
   // Get top severity bottlenecks
   const severeBottlenecks = bottlenecks.bottlenecks.filter(b => b.severity === 'severe' || b.severity === 'high');
 
   // Get top priority recommendation
   const topRecommendation = recommendations.summary.top_priority || recommendations.recommendations[0];
 
-  // Handle verdict banner click - navigate to relevant tab
-  const handleVerdictClick = () => {
-    if (!onTabChange || !verdict) return;
-
-    switch (verdict.status) {
-      case 'critical':
-      case 'needs_optimization':
-        // Has recommendations - go to recommendations tab
-        onTabChange('recommendations');
-        break;
-      case 'minor_improvements':
-        // Minor issues - go to bottlenecks tab
-        onTabChange('bottlenecks');
-        break;
-      default:
-        // Well optimized - no action needed
-        break;
-    }
-  };
-
-  // Determine if verdict banner should be clickable
-  const isVerdictClickable = verdict && verdict.status !== 'well_optimized' && onTabChange;
-
   return (
     <div className="space-y-6">
-      {/* Optimization Verdict Banner */}
-      {verdict && (
-        <div
-          className={`neu-raised p-5 border-l-4 ${
-            verdict.color === 'green'
-              ? 'border-neu-green'
-              : verdict.color === 'yellow'
-              ? 'border-neu-orange'
-              : 'border-neu-coral'
-          } ${isVerdictClickable ? 'cursor-pointer hover:shadow-neu-raised-lg transition-all' : ''}`}
-          onClick={isVerdictClickable ? handleVerdictClick : undefined}
-          role={isVerdictClickable ? 'button' : undefined}
-          tabIndex={isVerdictClickable ? 0 : undefined}
-          onKeyDown={isVerdictClickable ? (e) => e.key === 'Enter' && handleVerdictClick() : undefined}
-        >
-          <div className="flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-              verdict.color === 'green'
-                ? 'bg-neu-green/15'
-                : verdict.color === 'yellow'
-                ? 'bg-neu-orange/15'
-                : 'bg-neu-coral/15'
-            }`}>
-              {verdict.color === 'green' ? (
-                <svg className="w-6 h-6 text-neu-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              ) : verdict.color === 'yellow' ? (
-                <svg className="w-6 h-6 text-neu-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              ) : (
-                <svg className="w-6 h-6 text-neu-coral" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              )}
-            </div>
-            <div className="flex-1">
-              <h3 className={`font-display font-semibold text-lg ${
-                verdict.color === 'green' ? 'text-neu-green' :
-                verdict.color === 'yellow' ? 'text-neu-orange' : 'text-neu-coral'
-              }`}>
-                {verdict.status === 'well_optimized' ? 'Well Optimized' :
-                 verdict.status === 'minor_improvements' ? 'Minor Improvements Available' :
-                 verdict.status === 'needs_optimization' ? 'Optimization Recommended' :
-                 'Critical Optimization Needed'}
-              </h3>
-              <p className="text-sm text-neu-text-muted mt-1">
-                {verdict.message}
-              </p>
-            </div>
-            {isVerdictClickable && (
-              <div className={`flex items-center gap-1 text-sm ${
-                verdict.color === 'green' ? 'text-neu-green' :
-                verdict.color === 'yellow' ? 'text-neu-orange' : 'text-neu-coral'
-              }`}>
-                <span>View</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Executive Summary */}
       <div className="neu-raised p-6">
         <div className="flex items-center justify-between mb-5">
