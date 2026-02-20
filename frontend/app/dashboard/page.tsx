@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { AppLayout } from '@/components/layout';
 import { ExecutionCard, WorkflowGroup, ExecutionData } from '@/components/dashboard';
+import { StepProgress } from '@/components/StepProgress';
 
 type FilterType = 'all' | 'success' | 'error';
 type GroupBy = 'workflow' | 'date' | 'none';
@@ -146,6 +147,11 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto">
+        {/* Step Progress - Always at top when visible */}
+        {executions.length < 3 && (
+          <StepProgress executionCount={executions.length} className="mb-6" />
+        )}
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
@@ -234,29 +240,30 @@ export default function DashboardPage() {
             </button>
           </div>
         ) : executions.length === 0 ? (
-          <div className="neu-flat p-12 text-center">
-            <div className="w-20 h-20 rounded-full bg-neu-accent/10 flex items-center justify-center mx-auto mb-6">
-              <svg className="w-10 h-10 text-neu-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-              </svg>
+          <div className="neu-flat p-12 text-center max-w-3xl mx-auto">
+              <div className="w-20 h-20 rounded-full bg-neu-accent/10 flex items-center justify-center mx-auto mb-6">
+                <svg className="w-10 h-10 text-neu-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+              </div>
+              <h3 className="font-display text-2xl font-semibold text-neu-text mb-2">No executions yet</h3>
+              <p className="text-neu-text-muted mb-6 max-w-md mx-auto">
+                Import your first n8n execution to get started with analysis.
+              </p>
+              <Link
+                href="/import"
+                className="btn-primary inline-flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Import Execution
+              </Link>
             </div>
-            <h3 className="font-display text-2xl font-semibold text-neu-text mb-2">No executions yet</h3>
-            <p className="text-neu-text-muted mb-6 max-w-md mx-auto">
-              Import your first n8n execution to get started with analysis.
-            </p>
-            <Link
-              href="/import"
-              className="btn-primary inline-flex items-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-              </svg>
-              Import Execution
-            </Link>
-          </div>
         ) : groups === null ? (
           // Ungrouped view
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredExecutions.map((execution, index) => (
               <ExecutionCard
                 key={execution.id}
@@ -266,6 +273,7 @@ export default function DashboardPage() {
                 animationDelay={index}
               />
             ))}
+            </div>
           </div>
         ) : (
           // Grouped view

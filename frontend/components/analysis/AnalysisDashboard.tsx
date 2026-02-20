@@ -199,11 +199,7 @@ export default function AnalysisDashboard({
         )}
 
         {activeTab === 'bottlenecks' && (
-          <BottleneckView
-            data={analysisData.bottlenecks}
-            onTabChange={handleTabChange}
-            onNodeFilter={handleNodeFilter}
-          />
+          <BottleneckView data={analysisData.bottlenecks} />
         )}
 
         {activeTab === 'errors' && (

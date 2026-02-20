@@ -5,10 +5,11 @@
  * Tab-based view combining playback and analysis
  */
 
-import { use, useState, useEffect } from 'react';
+import { use, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout';
+import { StepProgress, updateStepProgress } from '@/components/StepProgress';
 import { ExecutionTabs, TabId } from '@/components/execution/ExecutionTabs';
 import { ExecutionVisualizer } from '@/components/execution-visualizer';
 import { AnalysisOverview } from '@/components/analysis/AnalysisOverview';
@@ -69,10 +70,61 @@ export default function ExecutionPage({ params }: ExecutionPageProps) {
   const [sortBy, setSortBy] = useState<SortOption>('priority');
   const [nodeFilter, setNodeFilter] = useState<string | null>(null);
 
-  // Handle tab change
+  // Track if Step 2 completion has been triggered
+  const step2CompletedRef = useRef(false);
+
+  // Execution count for StepProgress
+  const [executionCount, setExecutionCount] = useState(0);
+
+  // Fetch execution count for StepProgress
+  useEffect(() => {
+    const fetchExecutionCount = async () => {
+      try {
+        const response = await fetch('http://localhost:8001/api/executions');
+        if (response.ok) {
+          const data = await response.json();
+          const executionsList = Array.isArray(data) ? data : (data.executions || data.data || []);
+          setExecutionCount(executionsList.length);
+        }
+      } catch {
+        // Silently fail
+      }
+    };
+    fetchExecutionCount();
+  }, []);
+
+  // Handle tab change - also marks Step 2 complete when viewing analysis
   const handleTabChange = (tab: TabId) => {
     setActiveTab(tab);
+
+    // Mark Step 2 complete after viewing any analysis tab (if on Step 2)
+    if (!step2CompletedRef.current) {
+      const currentStep = parseInt(localStorage.getItem('signalflow-current-step') || '1');
+      if (currentStep === 2) {
+        step2CompletedRef.current = true;
+        updateStepProgress({
+          completed: 2,
+        });
+      }
+    }
   };
+
+  // Auto-complete Step 2 after 10 seconds of viewing analysis
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!step2CompletedRef.current) {
+        const currentStep = parseInt(localStorage.getItem('signalflow-current-step') || '1');
+        if (currentStep === 2) {
+          step2CompletedRef.current = true;
+          updateStepProgress({
+            completed: 2,
+          });
+        }
+      }
+    }, 10000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Load data
   useEffect(() => {
@@ -158,6 +210,11 @@ export default function ExecutionPage({ params }: ExecutionPageProps) {
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto">
+        {/* Step Progress Boxes */}
+        {executionCount < 3 && (
+          <StepProgress executionCount={executionCount} className="mb-6" />
+        )}
+
         {/* Header */}
         <div className="neu-raised mb-6">
           {/* Breadcrumb */}
@@ -248,6 +305,7 @@ export default function ExecutionPage({ params }: ExecutionPageProps) {
               executionId={executionId}
               apiBaseUrl="http://localhost:8001"
               embedded={true}
+              hasStepProgress={executionCount < 3}
               initialBottlenecks={analysisData?.bottlenecks?.bottlenecks}
               initialRecommendations={analysisData?.recommendations?.recommendations}
               workflowName={executionMeta.workflow_name}

@@ -19,6 +19,7 @@ import { Filters, SortOption } from './AnalysisDashboard';
 import { FilterControls } from './FilterControls';
 import { generateClaudeCodePrompt, generatePromptSummary, PromptGeneratorInput } from '@/lib/promptGenerator';
 import { sanitizeWorkflowJSON } from '@/lib/workflowSanitizer';
+import { updateStepProgress } from '@/components/StepProgress';
 
 type ViewMode = 'list' | 'grouped';
 
@@ -120,6 +121,14 @@ export function RecommendationsView({
       const summary = generatePromptSummary(promptInput);
       setCopySuccess(`Copied! ${summary}`);
       setTimeout(() => setCopySuccess(null), 4000);
+
+      // Mark Step 3 complete when user copies optimize prompt
+      const currentStep = parseInt(localStorage.getItem('signalflow-current-step') || '1');
+      if (currentStep === 3) {
+        updateStepProgress({
+          completed: 3,
+        });
+      }
     } catch (err) {
       setCopySuccess('Failed to copy - try again');
       setTimeout(() => setCopySuccess(null), 3000);
@@ -143,6 +152,14 @@ export function RecommendationsView({
     a.download = `signalflow-prompt-${exportData.executionId.slice(0, 8)}.md`;
     a.click();
     URL.revokeObjectURL(url);
+
+    // Mark Step 3 complete when user downloads optimize prompt
+    const currentStep = parseInt(localStorage.getItem('signalflow-current-step') || '1');
+    if (currentStep === 3) {
+      updateStepProgress({
+        completed: 3,
+      });
+    }
 
     setCopySuccess('Prompt downloaded!');
     setTimeout(() => setCopySuccess(null), 3000);

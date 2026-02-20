@@ -9,6 +9,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout';
+import { updateStepProgress } from '@/components/StepProgress';
 
 type ImportMethod = 'file' | 'paste' | 'fetch';
 
@@ -202,6 +203,11 @@ export default function ImportPage() {
         duration_ms: data.duration_ms,
       });
 
+      // Update step progress - mark Step 1 complete
+      updateStepProgress({
+        completed: 1,
+      });
+
       // Redirect to unified execution page after short delay
       setTimeout(() => {
         router.push(`/execution/${data.execution_id}`);
@@ -267,6 +273,11 @@ export default function ImportPage() {
       const data: ImportResult = await response.json();
       setResult(data);
 
+      // Update step progress - mark Step 1 complete
+      updateStepProgress({
+        completed: 1,
+      });
+
       // Redirect to unified execution page after short delay
       setTimeout(() => {
         router.push(`/execution/${data.execution_id}`);
@@ -299,14 +310,15 @@ export default function ImportPage() {
 
   return (
     <AppLayout>
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="font-display text-2xl font-bold text-neu-text">Import Execution</h1>
-          <p className="mt-1 text-sm text-neu-text-muted font-body">
-            Upload, paste, or fetch n8n execution data to analyze workflow performance
-          </p>
-        </div>
+      <div className="max-w-4xl mx-auto">
+        <div className="max-w-2xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="font-display text-2xl font-bold text-neu-text">Import Execution</h1>
+            <p className="mt-1 text-sm text-neu-text-muted font-body">
+              Upload, paste, or fetch n8n execution data to analyze workflow performance
+            </p>
+          </div>
 
         {/* Main Card */}
         <div className="neu-raised p-6">
@@ -613,30 +625,188 @@ export default function ImportPage() {
           </div>
         </div>
 
-        {/* Help Text */}
-        {method === 'fetch' ? (
-          <div className="mt-6 p-4 neu-flat border-l-4 border-neu-accent">
-            <h3 className="text-sm font-medium text-neu-text mb-2">How to get your n8n API key:</h3>
-            <ol className="text-sm text-neu-text-muted space-y-1 list-decimal list-inside">
-              <li>Open your n8n instance</li>
-              <li>Go to Settings (gear icon)</li>
-              <li>Click on "API" in the sidebar</li>
-              <li>Create a new API key or copy an existing one</li>
-              <li>Paste it above - it will be saved for future use</li>
-            </ol>
-          </div>
-        ) : (
-          <div className="mt-6 p-4 neu-flat border-l-4 border-neu-accent">
-            <h3 className="text-sm font-medium text-neu-text mb-2">How to export from n8n:</h3>
-            <ol className="text-sm text-neu-text-muted space-y-1 list-decimal list-inside">
-              <li>Open your workflow in n8n</li>
-              <li>Go to Executions tab</li>
-              <li>Click on the execution you want to analyze</li>
-              <li>Click the download/export button to get the JSON</li>
-              <li>Upload or paste the JSON here</li>
-            </ol>
+        {/* Method-Specific Instructions */}
+        {method === 'file' && (
+          <div className="mt-6 neu-inset p-6">
+            <h3 className="font-display font-semibold text-neu-text mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-neu-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              How to Upload Your Execution File
+            </h3>
+
+            <div className="space-y-4 text-sm text-neu-text-muted">
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neu-accent/20 flex items-center justify-center text-neu-accent font-semibold text-xs">
+                  1
+                </div>
+                <div>
+                  <p className="font-semibold text-neu-text mb-1">Download from n8n</p>
+                  <p>In n8n, go to <span className="font-mono text-neu-accent">Executions</span> → Select execution → Click <span className="font-mono text-neu-accent">Download</span></p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neu-accent/20 flex items-center justify-center text-neu-accent font-semibold text-xs">
+                  2
+                </div>
+                <div>
+                  <p className="font-semibold text-neu-text mb-1">Upload Here</p>
+                  <p>Click the upload zone above or drag & drop your <span className="font-mono text-neu-accent">.json</span> file</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neu-accent/20 flex items-center justify-center text-neu-accent font-semibold text-xs">
+                  3
+                </div>
+                <div>
+                  <p className="font-semibold text-neu-text mb-1">Analyze</p>
+                  <p>SignalFlow will process your workflow and identify optimization opportunities</p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
+
+        {method === 'paste' && (
+          <div className="mt-6 neu-inset p-6">
+            <h3 className="font-display font-semibold text-neu-text mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-neu-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              How to Paste Execution JSON
+            </h3>
+
+            <div className="space-y-4 text-sm text-neu-text-muted">
+              {/* Step 1: Create API Key */}
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neu-accent/20 flex items-center justify-center text-neu-accent font-semibold text-xs">
+                  1
+                </div>
+                <div>
+                  <p className="font-semibold text-neu-text mb-1">Create an API Key</p>
+                  <ul className="space-y-1 list-disc list-inside ml-2">
+                    <li>In n8n, go to <span className="font-mono text-neu-accent">Settings → n8n API</span></li>
+                    <li>Click <span className="font-mono text-neu-accent">Create an API key</span></li>
+                    <li>Copy the key</li>
+                  </ul>
+                  <p className="text-xs mt-2 text-neu-orange">Note: n8n&apos;s public API may not be available on some plans/trials</p>
+                </div>
+              </div>
+
+              {/* Step 2: Fetch & Copy JSON */}
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neu-accent/20 flex items-center justify-center text-neu-accent font-semibold text-xs">
+                  2
+                </div>
+                <div>
+                  <p className="font-semibold text-neu-text mb-2">Fetch Execution to Clipboard</p>
+
+                  {/* macOS */}
+                  <div className="mb-3">
+                    <p className="text-xs font-semibold text-neu-accent mb-1">macOS</p>
+                    <pre className="bg-neu-shadow-dark p-3 rounded-lg overflow-x-auto text-xs font-mono whitespace-pre-wrap">
+{`curl -sS \\
+  -H "X-N8N-API-KEY: YOUR_KEY_HERE" \\
+  "https://<your-n8n-domain>/api/v1/executions/<execution-id>?includeData=true" \\
+  | pbcopy`}
+                    </pre>
+                  </div>
+
+                  {/* Windows */}
+                  <div className="mb-3">
+                    <p className="text-xs font-semibold text-neu-accent mb-1">Windows PowerShell</p>
+                    <pre className="bg-neu-shadow-dark p-3 rounded-lg overflow-x-auto text-xs font-mono whitespace-pre-wrap">
+{`(Invoke-RestMethod \`
+  -Headers @{"X-N8N-API-KEY"="YOUR_KEY_HERE"} \`
+  -Uri "https://<your-n8n-domain>/api/v1/executions/<execution-id>?includeData=true") \`
+| ConvertTo-Json -Depth 100 \`
+| Set-Clipboard`}
+                    </pre>
+                  </div>
+
+                  {/* Linux */}
+                  <div>
+                    <p className="text-xs font-semibold text-neu-accent mb-1">Linux (most desktops)</p>
+                    <pre className="bg-neu-shadow-dark p-3 rounded-lg overflow-x-auto text-xs font-mono whitespace-pre-wrap">
+{`curl -sS \\
+  -H "X-N8N-API-KEY: YOUR_KEY_HERE" \\
+  "https://<your-n8n-domain>/api/v1/executions/<execution-id>?includeData=true" \\
+  | xclip -selection clipboard`}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3: Paste */}
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neu-accent/20 flex items-center justify-center text-neu-accent font-semibold text-xs">
+                  3
+                </div>
+                <div>
+                  <p className="font-semibold text-neu-text mb-1">Paste & Import</p>
+                  <p>Paste the JSON in the text area above and click <span className="font-mono text-neu-accent">Import Execution</span></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {method === 'fetch' && (
+          <div className="mt-6 neu-inset p-6">
+            <h3 className="font-display font-semibold text-neu-text mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-neu-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              How to Fetch from n8n
+            </h3>
+
+            <div className="space-y-4 text-sm text-neu-text-muted">
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neu-accent/20 flex items-center justify-center text-neu-accent font-semibold text-xs">
+                  1
+                </div>
+                <div>
+                  <p className="font-semibold text-neu-text mb-1">Get Your n8n Instance URL</p>
+                  <p>Copy your n8n instance URL (e.g., <span className="font-mono text-neu-accent">https://your-instance.n8n.cloud</span>)</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neu-accent/20 flex items-center justify-center text-neu-accent font-semibold text-xs">
+                  2
+                </div>
+                <div>
+                  <p className="font-semibold text-neu-text mb-1">Create an API Key</p>
+                  <p>In n8n, go to <span className="font-mono text-neu-accent">Settings → n8n API → Create an API key</span></p>
+                  <p className="text-xs mt-1 text-neu-orange">Note: API access may not be available on all plans</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neu-accent/20 flex items-center justify-center text-neu-accent font-semibold text-xs">
+                  3
+                </div>
+                <div>
+                  <p className="font-semibold text-neu-text mb-1">Find the Execution ID</p>
+                  <p>Go to your workflow&apos;s <span className="font-mono text-neu-accent">Executions</span> tab. The ID is in the URL: <span className="font-mono text-neu-accent">/executions/<strong>4350</strong></span></p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-neu-accent/20 flex items-center justify-center text-neu-accent font-semibold text-xs">
+                  4
+                </div>
+                <div>
+                  <p className="font-semibold text-neu-text mb-1">Fetch & Analyze</p>
+                  <p>Fill in the fields above and click <span className="font-mono text-neu-accent">Fetch & Import</span>. Your credentials will be saved for next time.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        </div>
       </div>
     </AppLayout>
   );

@@ -31,6 +31,8 @@ interface ExecutionVisualizerProps {
   workflowName?: string;
   // When true, renders as embedded tab content (no header, fixed height)
   embedded?: boolean;
+  // When true, reduces height to account for StepProgress boxes above
+  hasStepProgress?: boolean;
 }
 
 export function ExecutionVisualizer({
@@ -42,6 +44,7 @@ export function ExecutionVisualizer({
   initialRecommendations,
   workflowName: initialWorkflowName,
   embedded = false,
+  hasStepProgress = false,
 }: ExecutionVisualizerProps) {
   const [data, setData] = useState<ExecutionData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -241,10 +244,20 @@ export function ExecutionVisualizer({
   const selectedBottleneck = selectedNode ? getNodeBottleneck(selectedNode) : null;
   const selectedRecommendations = selectedNode ? getNodeRecommendations(selectedNode) : [];
 
-  // Embedded mode: renders as tab content with fixed height
+  // Embedded mode: renders as tab content with viewport-constrained height
+  // Subtract more height when StepProgress boxes are visible above
+  const heightOffset = hasStepProgress ? 480 : 350;
+
   if (embedded) {
     return (
-      <div className="flex flex-col bg-neu-bg rounded-xl overflow-hidden">
+      <div
+        className="grid bg-neu-bg rounded-xl"
+        style={{
+          height: `calc(100dvh - ${heightOffset}px)`,
+          minHeight: '400px',
+          gridTemplateRows: 'auto 1fr auto',
+        }}
+      >
         {/* Compact Header with metadata */}
         <div className="neu-raised-sm px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4 text-sm text-neu-text-muted">
@@ -317,8 +330,8 @@ export function ExecutionVisualizer({
           </div>
         </div>
 
-        {/* Canvas - Fixed height */}
-        <div className="h-[500px] overflow-hidden relative bg-neu-shadow-dark">
+        {/* Canvas - Fills middle row of grid */}
+        <div className="overflow-hidden relative bg-neu-shadow-dark min-h-0">
           <WorkflowCanvas
             nodes={updatedNodes}
             edges={edges}
@@ -340,7 +353,7 @@ export function ExecutionVisualizer({
           )}
         </div>
 
-        {/* Playback Controls */}
+        {/* Playback Controls - Sticky at bottom */}
         <PlaybackControls
           state={playbackState}
           controls={controls}
