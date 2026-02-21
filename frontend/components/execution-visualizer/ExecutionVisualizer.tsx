@@ -245,16 +245,17 @@ export function ExecutionVisualizer({
   const selectedRecommendations = selectedNode ? getNodeRecommendations(selectedNode) : [];
 
   // Embedded mode: renders as tab content with viewport-constrained height
-  // Subtract more height when StepProgress boxes are visible above
-  const heightOffset = hasStepProgress ? 480 : 350;
+  // Use viewport-relative heights for better scaling across screen sizes
+  // With StepProgress: 45dvh preferred, without: 55dvh preferred
+  const preferredHeight = hasStepProgress ? '45dvh' : '55dvh';
 
   if (embedded) {
     return (
       <div
         className="grid bg-neu-bg rounded-xl"
         style={{
-          height: `calc(100dvh - ${heightOffset}px)`,
-          minHeight: '400px',
+          // clamp(min, preferred, max) ensures canvas is never too small or too large
+          height: `clamp(400px, ${preferredHeight}, 70dvh)`,
           gridTemplateRows: 'auto 1fr auto',
         }}
       >
