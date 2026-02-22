@@ -9,6 +9,7 @@ from src.analysis.critical_path import CriticalPathAnalyzer
 from src.analysis.bottlenecks import BottleneckAnalyzer
 from src.analysis.error_clustering import ErrorClusteringAnalyzer
 from src.analysis.recommendations import RecommendationEngine
+from src.analysis.comparison import ComparisonAnalyzer
 from supabase import create_client
 from datetime import datetime
 import json
@@ -1149,6 +1150,59 @@ async def delete_all_executions():
 
     except Exception as e:
         print(f"Error deleting all executions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/compare")
+async def compare_executions(exec_a: str, exec_b: str):
+    """
+    Compare two workflow executions to analyze optimization impact.
+
+    Returns severity distribution changes, resolved bottlenecks, persisting
+    issues, new bottlenecks (regressions), and a verdict.
+
+    Key insight: Severity matters more than count. An optimized workflow
+    with 8 LOW bottlenecks (all <100ms) is better than an unoptimized
+    workflow with 2 SEVERE bottlenecks.
+
+    Query Parameters:
+    - exec_a: UUID of the "before" execution (baseline)
+    - exec_b: UUID of the "after" execution (optimized)
+
+    Example: /api/compare?exec_a=4948&exec_b=4949
+
+    Response includes:
+    - before/after: Execution snapshots with severity distributions
+    - delta: Duration saved, improvement percentage, verdict
+    - resolved: Bottlenecks that were fixed
+    - persisting: Bottlenecks still present
+    - new: Regressions (new bottlenecks)
+    - top_improvements: Sorted list of biggest wins
+    """
+    try:
+        supabase = create_client(settings.supabase_url, settings.supabase_key)
+
+        analyzer = ComparisonAnalyzer(supabase)
+        comparison = analyzer.compare(exec_a, exec_b)
+
+        return {
+            "success": True,
+            "data": {
+                "comparison": comparison,
+                "analysis_context": {
+                    "execution_id_a": exec_a,
+                    "execution_id_b": exec_b,
+                    "analysis_type": "dual_execution_comparison",
+                    "calculated_at": datetime.utcnow().isoformat() + "Z",
+                    "from_cache": False
+                }
+            }
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        print(f"Error comparing executions: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

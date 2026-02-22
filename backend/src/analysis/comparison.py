@@ -490,30 +490,52 @@ class ComparisonAnalyzer:
         Generate optimization verdict based on comparison.
 
         Verdict priority (highest to lowest):
-        1. regression - Performance worsened or more new than fixed
-        2. excellent - All critical resolved
-        3. good_progress - Mix of resolved + improved
-        4. good_improvement - Significant overall improvement with improved nodes
-        5. some_improvement - Performance improved but bottlenecks persist
-        6. moderate_improvement - Modest gains (10-25%)
-        7. minimal_change - <10% overall improvement
+        1. regression - Performance worsened overall OR <5% gain with worsened nodes
+        2. mixed_results - 5-14% overall improvement but some nodes worsened
+        3. good_improvement_with_concerns - ≥15% overall but some worsened nodes
+        4. excellent - All critical resolved
+        5. good_progress - Mix of resolved + improved
+        6. good_improvement - Significant overall improvement with improved nodes
+        7. some_improvement - Performance improved but bottlenecks persist
+        8. moderate_improvement - Modest gains (10-25%)
+        9. minimal_change - <10% overall improvement
         """
 
-        # Check for regression first
-        if worsened_count > 0 or (new_count > resolved_count and new_count > 0):
+        # Check for mixed results / regression (worsened nodes or new bottlenecks)
+        has_concerns = worsened_count > 0 or (new_count > resolved_count and new_count > 0)
+
+        if has_concerns:
+            # True regression: new severe bottlenecks appeared
             if after["SEVERE"] > before["SEVERE"]:
                 return {
                     "status": "regression",
-                    "message": f"Regression detected: {after['SEVERE'] - before['SEVERE']} new severe bottleneck(s)"
+                    "message": f"Regression: {after['SEVERE'] - before['SEVERE']} new severe bottleneck(s)"
                 }
+
+            # Overall got faster despite some nodes getting slower
+            if overall_pct_improvement >= 15:
+                concern_detail = f"{worsened_count} node(s) got slower" if worsened_count > 0 else f"{new_count} new bottleneck(s)"
+                return {
+                    "status": "good_improvement_with_concerns",
+                    "message": f"{overall_pct_improvement:.1f}% faster overall, but {concern_detail} - investigate trade-offs"
+                }
+
+            if overall_pct_improvement >= 5:
+                concern_detail = f"{worsened_count} node(s) got slower" if worsened_count > 0 else f"{new_count} new bottleneck(s)"
+                return {
+                    "status": "mixed_results",
+                    "message": f"{overall_pct_improvement:.1f}% faster overall, but {concern_detail} - review changes"
+                }
+
+            # True regression: minimal/no overall improvement with worsened nodes
             if worsened_count > 0:
                 return {
                     "status": "regression",
-                    "message": f"Regression detected: {worsened_count} bottleneck(s) got slower"
+                    "message": f"Regression: {worsened_count} bottleneck(s) got slower ({overall_pct_improvement:.1f}% overall change)"
                 }
             return {
                 "status": "regression",
-                "message": f"Regression detected: {new_count} new bottleneck(s) introduced"
+                "message": f"Regression: {new_count} new bottleneck(s) introduced"
             }
 
         # All critical resolved
