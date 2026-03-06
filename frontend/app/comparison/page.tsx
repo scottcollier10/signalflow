@@ -27,6 +27,7 @@ interface CriticalPath {
 
 interface ExecutionSnapshot {
   execution_id: string;
+  n8n_execution_id: string;  // User-facing ID from n8n
   timestamp: string;
   duration: number;
   status: string;
@@ -308,8 +309,32 @@ function ComparisonContent() {
   const topImprovements = allImprovements.slice(0, 5);
   const minorImprovements = allImprovements.slice(5);
 
+  // Get display IDs (prefer n8n_execution_id over truncated UUID)
+  const beforeDisplayId = before.n8n_execution_id || before.execution_id.slice(-4);
+  const afterDisplayId = after.n8n_execution_id || after.execution_id.slice(-4);
+
   return (
     <div className="space-y-8">
+      {/* Comparison Header with correct n8n IDs */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-neu-text-muted text-lg">
+            Comparing <span className="text-neu-coral font-semibold">#{beforeDisplayId}</span>
+            {' → '}
+            <span className="text-neu-green font-semibold">#{afterDisplayId}</span>
+          </p>
+          {data.workflow_name && data.workflow_name !== 'Unknown' && (
+            <p className="text-neu-text-muted text-sm mt-1">{data.workflow_name}</p>
+          )}
+        </div>
+        <Link
+          href="/dashboard"
+          className="text-xs text-neu-text-muted hover:text-neu-accent transition-colors"
+        >
+          ← Back to Dashboard
+        </Link>
+      </div>
+
       {/* Timeline Visualization Bars */}
       <div className="neu-flat p-6">
         <div className="space-y-4">
@@ -355,7 +380,7 @@ function ComparisonContent() {
         <div className="neu-flat p-6">
           <div className="flex items-center gap-2 mb-6">
             <span className="badge-error">Before</span>
-            <span className="text-xs text-neu-text-muted">#{before.execution_id.slice(-4)}</span>
+            <span className="text-xs text-neu-text-muted">#{before.n8n_execution_id || before.execution_id.slice(-4)}</span>
           </div>
 
           {/* Huge Duration */}
@@ -398,7 +423,7 @@ function ComparisonContent() {
         <div className="neu-flat p-6">
           <div className="flex items-center gap-2 mb-6">
             <span className="badge-success">After</span>
-            <span className="text-xs text-neu-text-muted">#{after.execution_id.slice(-4)}</span>
+            <span className="text-xs text-neu-text-muted">#{after.n8n_execution_id || after.execution_id.slice(-4)}</span>
           </div>
 
           {/* Huge Duration */}

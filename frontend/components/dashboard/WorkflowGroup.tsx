@@ -3,7 +3,10 @@
 /**
  * Workflow Group Component
  * Groups executions by workflow with neumorphic design
- * Phase 2: Added Compare Versions, sorting, optimized badges
+ * Phase 2 Critical Fixes:
+ * - Compare first→latest (total journey)
+ * - Removed "optimized" badge (comparison view is more accurate)
+ * - Added timeline order indicator with Baseline badge
  */
 
 import { useState, useMemo } from 'react';
@@ -39,41 +42,18 @@ export function WorkflowGroup({
   const errorCount = executions.filter(e => e.status === 'error').length;
   const hasMultipleExecutions = executions.length >= 2;
 
-  // Get latest and second-to-latest for comparison
-  const latestExecution = sortedExecutions[0];
-  const previousExecution = sortedExecutions[1];
+  // Get first (baseline) and latest for comparison
+  const latestExecution = sortedExecutions[0]; // newest
+  const firstExecution = sortedExecutions[sortedExecutions.length - 1]; // oldest (baseline)
 
-  // Detect "optimized" executions (faster than average of previous runs)
-  const optimizedExecutions = useMemo(() => {
-    if (sortedExecutions.length < 2) return new Set<string>();
-
-    const optimized = new Set<string>();
-
-    // Calculate average duration of all executions
-    const durationsWithId = sortedExecutions
-      .filter(e => e.duration_ms !== undefined)
-      .map(e => ({ id: e.id, duration: e.duration_ms! }));
-
-    if (durationsWithId.length < 2) return optimized;
-
-    // Mark executions that are significantly faster than the previous one
-    for (let i = 0; i < durationsWithId.length - 1; i++) {
-      const current = durationsWithId[i];
-      const previous = durationsWithId[i + 1];
-
-      // If current is 30%+ faster than previous, mark as optimized
-      if (current.duration < previous.duration * 0.7) {
-        optimized.add(current.id);
-      }
-    }
-
-    return optimized;
-  }, [sortedExecutions]);
-
-  // Build compare URL with the two most recent executions
+  // Build compare URL: first → latest (total journey)
   const compareUrl = hasMultipleExecutions
-    ? `/comparison?exec_a=${previousExecution?.id}&exec_b=${latestExecution?.id}`
+    ? `/comparison?exec_a=${firstExecution?.id}&exec_b=${latestExecution?.id}`
     : null;
+
+  // Get display IDs for button
+  const firstDisplayId = firstExecution?.n8n_execution_id || firstExecution?.id.slice(-4);
+  const latestDisplayId = latestExecution?.n8n_execution_id || latestExecution?.id.slice(-4);
 
   return (
     <div className="neu-raised overflow-hidden">
@@ -115,11 +95,6 @@ export function WorkflowGroup({
                   <span>✗</span> {errorCount}
                 </span>
               )}
-              {optimizedExecutions.size > 0 && (
-                <span className="badge-info text-xs">
-                  ⚡ {optimizedExecutions.size} optimized
-                </span>
-              )}
             </div>
           </div>
         </div>
@@ -140,34 +115,65 @@ export function WorkflowGroup({
         <div className="px-5 pb-5 pt-2">
           <div className="divider-neu mb-5" />
 
-          {/* Executions - indented with left border */}
-          <div className="pl-4 border-l-2 border-neu-accent/20 ml-2">
+          {/* Executions - Timeline style with dots */}
+          <div className="relative pl-6 ml-2">
+            {/* Vertical timeline line */}
+            <div className="absolute left-0 top-4 bottom-4 w-0.5 bg-gradient-to-b from-neu-accent/40 via-neu-accent/20 to-neu-accent/40" />
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {sortedExecutions.map((execution, index) => (
-                <div key={execution.id} className="relative">
-                  {/* Optimized Badge */}
-                  {optimizedExecutions.has(execution.id) && (
+              {sortedExecutions.map((execution, index) => {
+                const isLatest = index === 0;
+                const isBaseline = index === sortedExecutions.length - 1 && sortedExecutions.length > 1;
+                const versionNumber = sortedExecutions.length - index; // V1 is oldest, V3 is newest
+
+                return (
+                  <div key={execution.id} className="relative">
+                    {/* Timeline dot - positioned to align with card */}
+                    <div className="absolute -left-6 top-8 z-10">
+                      <div
+                        className={`w-3 h-3 rounded-full border-2 ${
+                          isLatest
+                            ? 'bg-neu-accent border-neu-accent animate-pulse'
+                            : isBaseline
+                            ? 'bg-transparent border-neu-text-muted'
+                            : 'bg-neu-accent/50 border-neu-accent/50'
+                        }`}
+                      />
+                    </div>
+
+                    {/* Version number badge (subtle, top-right) */}
                     <div className="absolute -top-2 -right-2 z-10">
-                      <span className="badge-success text-xs px-2 py-1 flex items-center gap-1 shadow-lg">
-                        ⚡ Optimized
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-neu-shadow-dark/50 text-neu-text-muted font-mono">
+                        V{versionNumber}
                       </span>
                     </div>
-                  )}
-                  {/* Latest Badge */}
-                  {index === 0 && (
-                    <div className="absolute -top-2 -left-2 z-10">
-                      <span className="badge-info text-xs px-2 py-1">
-                        Latest
-                      </span>
-                    </div>
-                  )}
-                  <ExecutionCard
-                    execution={execution}
-                    onDelete={onDeleteExecution}
-                    animationDelay={index}
-                  />
-                </div>
-              ))}
+
+                    {/* Latest Badge */}
+                    {isLatest && (
+                      <div className="absolute -top-2 -left-2 z-10">
+                        <span className="badge-info text-xs px-2 py-1">
+                          Latest
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Baseline Badge */}
+                    {isBaseline && (
+                      <div className="absolute -top-2 -left-2 z-10">
+                        <span className="text-xs px-2 py-1 rounded-full bg-neu-shadow-dark text-neu-text-muted border border-neu-text-muted/30">
+                          Baseline
+                        </span>
+                      </div>
+                    )}
+
+                    <ExecutionCard
+                      execution={execution}
+                      onDelete={onDeleteExecution}
+                      animationDelay={index}
+                    />
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -185,7 +191,10 @@ export function WorkflowGroup({
                   </svg>
                   Compare Versions
                   <span className="text-xs opacity-75">
-                    (#{previousExecution?.n8n_execution_id?.slice(-4) || previousExecution?.id.slice(-4)} → #{latestExecution?.n8n_execution_id?.slice(-4) || latestExecution?.id.slice(-4)})
+                    (#{firstDisplayId} → #{latestDisplayId})
+                  </span>
+                  <span className="text-xs opacity-50 ml-1">
+                    • Total journey
                   </span>
                 </Link>
               </div>

@@ -22,6 +22,7 @@ from src.analysis.bottlenecks import BottleneckAnalyzer
 class ExecutionSnapshot:
     """Snapshot of an execution's analysis data"""
     execution_id: str
+    n8n_execution_id: str  # User-facing ID from n8n
     timestamp: str
     duration_ms: int
     status: str
@@ -245,6 +246,7 @@ class ComparisonAnalyzer:
             "workflow_name": exec_a.nodes.get('_metadata', {}).get('workflow_name', 'Unknown'),
             "before": {
                 "execution_id": exec_a.execution_id,
+                "n8n_execution_id": exec_a.n8n_execution_id,
                 "timestamp": exec_a.timestamp,
                 "duration": exec_a.duration_ms,
                 "status": exec_a.status,
@@ -261,6 +263,7 @@ class ComparisonAnalyzer:
             },
             "after": {
                 "execution_id": exec_b.execution_id,
+                "n8n_execution_id": exec_b.n8n_execution_id,
                 "timestamp": exec_b.timestamp,
                 "duration": exec_b.duration_ms,
                 "status": exec_b.status,
@@ -314,7 +317,7 @@ class ComparisonAnalyzer:
         try:
             # Load execution metadata (include workflow_id for fallback analysis)
             exec_response = self.db.table('executions').select(
-                'id, workflow_id, started_at, finished_at, duration_ms, status'
+                'id, workflow_id, n8n_execution_id, started_at, finished_at, duration_ms, status'
             ).eq('id', execution_id).execute()
 
             if not exec_response.data:
@@ -416,6 +419,7 @@ class ComparisonAnalyzer:
 
             return ExecutionSnapshot(
                 execution_id=execution_id,
+                n8n_execution_id=exec_data.get('n8n_execution_id', ''),
                 timestamp=timestamp,
                 duration_ms=exec_data.get('duration_ms', 0),
                 status=exec_data.get('status', 'unknown'),

@@ -1,0 +1,265 @@
+# PHASE 2: Dashboard Grouping + Comparison View - COMPLETION GUIDE
+
+## STATUS: Critical Fixes Required Before Ship
+
+### Completed ✅
+- [x] Backend comparison algorithm with nuanced verdicts
+- [x] Dashboard workflow grouping
+- [x] Comparison view connected to real API
+- [x] Regression detection (mixed results, pure regression)
+- [x] Worsened nodes detailed breakdown
+
+### Critical Fixes (1-2 hours) 🔴
+- [ ] Fix execution ID display bug (n8n_execution_id vs UUID)
+- [ ] Change default comparison to first → latest
+- [ ] Remove "Optimized" badge (or tie to recommendations=0)
+- [ ] Add execution order visual indicator
+
+### Known Limitations (Documented, Not Blocking) 📋
+- Custom execution pair selection (v2 feature)
+- Baseline concept (implicit: first = baseline)
+- Journey timeline view (v2 feature)
+
+---
+
+## Git Checkpoint After Fixes
+```bash
+cd /Users/scottcollier/dev/signalflow
+
+# Review changes
+git status
+git diff
+
+# Commit fixes
+git add frontend/app/comparison/page.tsx
+git add frontend/components/dashboard/WorkflowGroup.tsx
+git add frontend/components/dashboard/ExecutionCard.tsx
+
+git commit -m "fix: Critical comparison UX fixes before Phase 2 ship
+
+- Fix execution ID bug: Display n8n_execution_id consistently (not truncated UUID)
+- Change default comparison from previous→latest to first→latest (total journey)
+- Remove optimized badge threshold confusion (verdict system is better)
+- Add execution order visual indicator (timeline dots + baseline/latest badges)
+- Update compare button to show IDs: 'Compare Versions (#4948 → #4952)'
+
+Tested with Executive Pulse (3 executions) - all IDs match across UI.
+Closes #[issue] if tracking"
+
+git tag tier3-phase2-fixes -m "Phase 2 critical fixes: ID bug, default logic, order indicator"
+```
+
+---
+
+## Phase 3: Polish & Visual Refinement (1-2 days)
+
+After critical fixes, THEN polish:
+
+### Optional Enhancements (Pick & Choose):
+
+#### 1. Severity Breakdown in Comparison Cards (30 min)
+```
+BEFORE:                    AFTER:
+16 bottlenecks             16 bottlenecks
+├─ 2 SEVERE 🔴           ├─ 0 SEVERE ✅
+├─ 5 HIGH 🟠             ├─ 0 HIGH ✅
+└─ 9 MEDIUM 🟡           └─ 16 LOW (all <100ms)
+```
+
+#### 2. Absolute Durations in Node Breakdown (20 min)
+```
+delete_existing_data                      99.9% ↓
+11.6s → 8ms (removed from critical path)
+```
+
+#### 3. Verdict Icons & Colors (15 min)
+```
+✅ EXCELLENT OPTIMIZATION (green)
+📈 GOOD IMPROVEMENT (blue)
+⚠️ GOOD IMPROVEMENT WITH CONCERNS (orange)
+🔴 REGRESSION (red)
+```
+
+#### 4. "What Changed" Summary Card (30 min)
+```
+┌─────────────────────────────┐
+│ Impact Summary              │
+│ ✅ 3 resolved               │
+│ 📈 1 improved               │
+│ ⚠️ 4 persisting              │
+│ 🔴 0 worsened               │
+└─────────────────────────────┘
+```
+
+#### 5. Mini Timeline Bars Per Node (45 min)
+```
+claude_api_call                     45.9% ↓
+████████████ → ██████  (4.7s → 2.5s)
+```
+
+#### 6. Hover States & Animations (30 min)
+- Smooth transitions on card hover
+- Pulse animation on verdict banners
+- Tooltip on truncated node names
+
+#### 7. Loading & Error States (30 min)
+- Skeleton loaders while fetching comparison
+- Error message if executions not found
+- Retry button on API failure
+
+---
+
+## Testing Matrix Before Ship
+
+Test all verdict categories with real data:
+
+| Workflow | Comparison | Expected Verdict | Status |
+|----------|------------|------------------|--------|
+| Executive Pulse | #4948 → #4949 | Excellent (23% faster) | ✅ |
+| AI Lead Scoring | #4950 → #4951 | Good Improvement (45.6%) | ✅ |
+| Campaign Auditor | #4920 → #4947 | Mixed Results (13.9% but 4 worsened) | ✅ |
+| Executive Pulse | #4949 → #4952 | Regression (slower) | ✅ |
+
+Edge cases:
+- [ ] Workflow with 1 execution (no compare button shown)
+- [ ] Workflow with 2 executions (first → latest)
+- [ ] Workflow with 3+ executions (first → latest)
+- [ ] Comparison with no bottlenecks changed
+- [ ] Comparison with all bottlenecks worsened
+
+---
+
+## Portfolio Screenshot Checklist
+
+After polish, capture these key screens:
+
+### 1. Dashboard - Workflow Grouping
+- [ ] Show 2-3 workflow groups
+- [ ] Latest/Baseline badges visible
+- [ ] Execution order indicator clear
+- [ ] Compare Versions button with IDs shown
+
+### 2. Comparison - Excellent Optimization
+- [ ] Green banner, positive verdict
+- [ ] Timeline bars showing improvement
+- [ ] Resolved bottlenecks section
+- [ ] Clean, professional layout
+
+### 3. Comparison - Mixed Results
+- [ ] Orange banner with nuanced message
+- [ ] Worsened nodes section visible
+- [ ] Shows both wins AND concerns
+
+### 4. Comparison - Regression
+- [ ] Red banner, clear warning
+- [ ] Time added (not saved)
+- [ ] Persisting/worsened breakdown
+
+### 5. Full Workflow Journey
+- [ ] 3+ executions visible
+- [ ] Order indicator working
+- [ ] Compare button shows first → latest
+
+---
+
+## Documentation Updates
+
+### Update README.md
+
+Add Phase 2 features:
+```markdown
+## Tier 3: Comparison Engine ✅
+
+### Features
+- **Multi-execution workflow tracking** - Group by workflow, compare versions
+- **First → Latest comparison** - See total improvement journey
+- **Nuanced verdict system** - 7 levels from excellent to regression
+- **Mixed results detection** - Acknowledge wins while flagging concerns
+- **Execution timeline** - Visual order indicator for version history
+
+### Comparison Verdicts
+- ✅ **Excellent** - All bottlenecks resolved
+- 📈 **Good Improvement** - 25%+ faster, meaningful progress
+- ⚠️ **Good Improvement with Concerns** - Faster overall but some nodes worsened
+- 📊 **Mixed Results** - Modest gains with trade-offs
+- 🔴 **Regression** - Performance worsened or new bottlenecks introduced
+```
+
+### Update .project-context.md
+```markdown
+## Current State (Phase 2 Complete)
+
+SignalFlow v0.8 - Tier 3 comparison engine complete.
+
+**Dashboard:**
+- Workflows grouped by workflow_id
+- Execution cards show timeline order (dots/badges)
+- "Compare Versions" button (first → latest)
+- Latest/Baseline badges
+- n8n execution IDs displayed consistently
+
+**Comparison View:**
+- Timeline bars (visual before/after)
+- Side-by-side metric cards
+- Nuanced verdict banners (7 types)
+- Resolved/Improved/Persisting/Worsened breakdown
+- Detailed node-level analysis
+- Handles regressions, mixed results
+
+**Next:** Phase 3 polish (severity breakdown, icons, animations)
+```
+
+---
+
+## Known Limitations (Document in README)
+```markdown
+## Known Limitations (v0.8)
+
+### Multi-Execution Comparison Selection
+When workflow has 3+ executions, "Compare Versions" compares first → latest 
+(total journey from baseline to current state).
+
+**Workaround:** Navigate to `/comparison?exec_a=X&exec_b=Y` manually for custom pairs.
+
+**Planned for v2:** Dropdown selector for:
+- Total journey (first → latest)
+- Latest change (previous → latest)
+- Custom pair selection
+
+### Baseline Concept
+Currently implicit (first execution = baseline).
+
+**Planned for v2:** 
+- User-configurable baseline
+- "Reset baseline" after major refactor
+- Baseline tracking in database
+```
+
+---
+
+## Definition of Done - Phase 2
+
+Phase 2 is COMPLETE when:
+
+✅ All 4 critical fixes implemented
+✅ Testing matrix passed (all verdicts work)
+✅ n8n IDs shown consistently across UI
+✅ Execution order visually clear
+✅ Git checkpoint with descriptive commit
+✅ README updated with Tier 3 features
+✅ Known limitations documented
+✅ At least 3 polish items completed (optional)
+✅ Portfolio screenshots captured
+
+---
+
+## Timeline Estimate
+
+- Critical Fixes: 1-2 hours
+- Polish (3-4 items): 2-3 hours
+- Testing & Screenshots: 1 hour
+- Documentation: 30 minutes
+
+**Total:** 4-6 hours to ship Phase 2 ✅
+
+Then Phase 4: Go-to-market prep (landing copy, demo video, n8n community post)

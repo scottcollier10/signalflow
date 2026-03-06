@@ -1,15 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { Suspense } from 'react';
 
 function ComparisonLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  const execA = searchParams.get('exec_a');
-  const execB = searchParams.get('exec_b');
 
   // Check if we're viewing a prototype variant
   const isPrototype = pathname.includes('/variant-');
@@ -38,15 +34,11 @@ function ComparisonLayoutContent({ children }: { children: React.ReactNode }) {
               {isPrototype ? 'Layout Prototype' : 'Execution Comparison'}
             </h1>
           </div>
-          <p className="text-neu-text-muted">
-            {execA && execB ? (
-              <>Comparing #{execA.slice(-4)} → #{execB.slice(-4)}</>
-            ) : isPrototype ? (
-              <>Prototype Layout • Variant D (Hybrid)</>
-            ) : (
-              <>Select two executions to compare</>
-            )}
-          </p>
+          {isPrototype && (
+            <p className="text-neu-text-muted">
+              Prototype Layout • Variant D (Hybrid)
+            </p>
+          )}
         </div>
 
         {/* Prototype Navigation (only show on variant pages) */}
