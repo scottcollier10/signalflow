@@ -41,3 +41,10 @@ supabase/.temp/
 # Uploads
 backend/uploads/
 backend/temp/
+
+# Dev artifacts
+*.db
+*.sql
+*.BACKUP
+execution_*.json
+test_execution.json
