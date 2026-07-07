@@ -205,7 +205,7 @@ No productized workflow observability tool exists for n8n, Make, or Zapier. This
 - Critical path analysis
 - Bottleneck detection (4-factor scoring)
 - Error clustering
-- 40+ recommendation rules
+- 37 recommendation rules
 - Claude Code export (workflow-wide and node-specific)
 - Guided Fix (visual node clicking)
 

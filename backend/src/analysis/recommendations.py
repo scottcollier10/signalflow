@@ -1,12 +1,13 @@
 """
-Recommendation Engine with 40 Detection Rules
+Recommendation Engine with 37 Detection Rules
 
 This module analyzes workflow executions to generate evidence-backed optimization
 recommendations based on critical path, bottleneck, and error cluster data.
 
-The 40 Detection Rules:
+The 37 Detection Rules (numbering has a gap: rules 27-30 were reserved during the
+Week-4 expansion and never built):
 
-PERFORMANCE RULES (1-22):
+PERFORMANCE RULES (1-7, 17-22):
 1. Sequential API Calls → Parallelize
 2. Long Node Duration → Optimize Algorithm
 3. High Loop Iteration → Batch Processing
@@ -21,7 +22,7 @@ PERFORMANCE RULES (1-22):
 21. Heavy Computation in Loop → Vectorize
 22. Inefficient Data Filtering → Server-side filter
 
-RELIABILITY RULES (8-16, 23-30):
+RELIABILITY RULES (8-16, 23-26):
 8. Repeated Timeouts → Increase Timeout
 9. Auth Failures → Fix Credentials
 10. Rate Limits → Add Backoff/Queuing
@@ -43,12 +44,13 @@ COST OPTIMIZATION RULES (31-35):
 34. Heavy Compute in Sync Flow → Use async
 35. Storage Without Cleanup → Add cleanup
 
-BOTTLENECK-BASED RULES (36-40):
+BOTTLENECK-BASED RULES (36-41):
 36. Severe Bottleneck → Immediate optimization
 37. High Bottleneck → Optimization recommended
 38. Multiple Medium Bottlenecks → Review workflow
 39. Critical Path Bottleneck → Priority optimization
 40. High Variance Node → Stabilize performance
+41. Orphaned Bottleneck → Surface bottlenecks no other rule covered
 
 Priority Score Formula: (impact_score / effort_multiplier) * 100
 - Impact score: 0-1 (based on time_saved or error_count)

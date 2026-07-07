@@ -31,7 +31,7 @@ SignalFlow V1 is an n8n workflow profiler that:
 - Critical path detection and highlighting
 - Bottleneck scoring (evidence-based)
 - Error pattern clustering
-- Recommendation engine (15 rules, rules-first)
+- Recommendation engine (37 rules, rules-first)
 - Weekly digest generator
 
 **Tech Foundation**:
@@ -261,7 +261,7 @@ See full SQL schema in `docs/data-model.sql` (included below)
 
 ## Recommendation Rules (V1 - Top 15)
 
-See full rules in `docs/rules/` directory. Summary:
+Full rule set (37 rules) lives in `backend/src/analysis/recommendations.py`. Original top-15 summary:
 
 1. **sequential-http-parallelizable** (P1) - Detect HTTP chains that could run in parallel
 2. **missing-timeout** (P1) - HTTP/Webhook nodes without timeout config

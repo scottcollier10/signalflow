@@ -32,25 +32,17 @@ n8n workflow optimization is currently manual, time-consuming, and error-prone:
 ## Tech Stack
 
 - **Frontend**: Next.js 14 (App Router), TypeScript, Tailwind CSS, shadcn/ui, React Flow
-- **Backend**: Python FastAPI (ML/AI processing)
-- **Database**: Supabase (PostgreSQL + Auth + Storage + pgvector)
-- **Queue**: BullMQ + Redis (background jobs)
-- **ML/AI**: Hugging Face Inference API
-- **Deployment**: Vercel (frontend), Railway/Fly.io (backend)
+- **Backend**: Python FastAPI (analysis engine)
+- **Database**: Supabase (PostgreSQL + pgvector), run locally via Docker
+- **ML**: sentence-transformers (all-MiniLM-L6-v2, local) + scikit-learn DBSCAN for error clustering
 
 ---
 
 ## Project Status
 
-🚧 **Phase 1 - V1 MVP Development**
+**V1 feature-complete.** Portfolio / technical case-study project — runs locally, import-based, no hosted deployment.
 
-Current Sprint: Week 1 - Foundation
-- [ ] Project setup
-- [ ] Database schema
-- [ ] Execution normalizer (core truth engine)
-- [ ] Basic dashboard
-
-See [docs/v1-spec.md](./docs/v1-spec.md) for complete V1 specification.
+See [docs/v1-spec.md](./docs/v1-spec.md) for the V1 specification.
 
 ---
 
@@ -60,35 +52,49 @@ See [docs/v1-spec.md](./docs/v1-spec.md) for complete V1 specification.
 
 - Node.js 18+
 - Python 3.10+
-- PostgreSQL 14+ (or Supabase account)
-- Redis (for background jobs)
+- Docker Desktop (for local Supabase)
+- [Supabase CLI](https://supabase.com/docs/guides/cli)
 
-### Setup
+### 1. Database (local Supabase via Docker)
 
 ```bash
-# Clone and navigate
-cd signalflow
-
-# Install frontend dependencies
-npm install
-
-# Install backend dependencies
-cd backend
-pip install -r requirements.txt
-
-# Set up environment variables
-cp .env.example .env.local
-# Edit .env.local with your keys
-
-# Run database migrations
-npm run db:migrate
-
-# Start development servers
-npm run dev          # Frontend (Next.js)
-npm run dev:backend  # Backend (FastAPI)
+# From the repo root
+supabase start   # starts Postgres + pgvector and applies supabase/migrations/
 ```
 
-Visit `http://localhost:3000`
+Note the API URL and keys that `supabase start` prints — you need them for the env files below.
+
+### 2. Backend (FastAPI)
+
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+cp .env.example .env
+# Edit .env: set SUPABASE_URL and SUPABASE_KEY (service_role key) from `supabase start` output
+
+uvicorn src.main:app --reload --port 8001
+```
+
+The backend must run on port **8001** — the frontend expects it there.
+
+First run downloads the all-MiniLM-L6-v2 embedding model (~80MB) from Hugging Face; after that everything works offline.
+
+### 3. Frontend (Next.js)
+
+```bash
+cd frontend
+npm install
+
+cp .env.local.example .env.local
+# Edit .env.local: set the Supabase URL and anon key
+
+npm run dev
+```
+
+Visit `http://localhost:3000`, then use **Import** to load an n8n execution JSON (file upload, paste, or n8n API fetch).
 
 ---
 
@@ -96,31 +102,24 @@ Visit `http://localhost:3000`
 
 ```
 signalflow/
-├── .project-context.md     # Project context for Claude.ai
 ├── README.md               # This file
+├── .project-context.md     # Project context for Claude sessions
 ├── docs/                   # Documentation
-│   ├── v1-spec.md         # Complete V1 specification
-│   ├── data-model.sql     # Database schema
-│   ├── architecture.md    # Technical architecture
-│   ├── specs/             # Feature specifications
-│   └── rules/             # Recommendation rules
-├── .claude-code-prompts/  # Implementation prompts for Claude Code
-├── frontend/              # Next.js application
-│   ├── src/
-│   │   ├── app/          # Next.js App Router
-│   │   ├── components/   # React components
-│   │   └── lib/          # Utilities
-│   └── supabase/         # Supabase config
-├── backend/               # Python FastAPI
-│   ├── src/
-│   │   ├── normalizer/   # Execution normalizer
-│   │   ├── analysis/     # Critical path, bottlenecks
-│   │   ├── scoring/      # Scoring algorithms
-│   │   └── rules/        # Recommendation rules
-│   └── requirements.txt
-└── demo/                  # Demo workflows
-    ├── workflows/        # Sample workflow JSONs
-    └── executions/       # Sample execution data
+│   ├── v1-spec.md         # V1 specification
+│   ├── data-model.sql     # Original schema sketch (historical; live schema is in supabase/migrations/)
+│   └── specs/             # Feature specifications
+├── supabase/               # Supabase config + live migrations
+├── frontend/               # Next.js application
+│   ├── app/               # Next.js App Router pages
+│   ├── components/        # React components
+│   └── lib/               # API client, utilities
+└── backend/                # Python FastAPI
+    ├── src/
+    │   ├── normalizer/    # Execution normalizer
+    │   ├── analysis/      # Critical path, bottlenecks, recommendations, error clustering
+    │   └── services/      # Database, external APIs
+    ├── test_*.py          # Test scripts
+    └── requirements.txt
 ```
 
 ---
@@ -170,101 +169,33 @@ Every recommendation includes:
 ## Documentation
 
 - **[V1 Specification](./docs/v1-spec.md)**: Complete MVP scope and timeline
-- **[Data Model](./docs/data-model.sql)**: Full database schema
-- **[Architecture](./docs/architecture.md)**: Technical design decisions
-- **[Project Context](./.project-context.md)**: Context for Claude.ai
+- **[Data Model](./docs/data-model.sql)**: Original schema sketch (historical — live schema is in [supabase/migrations/](./supabase/migrations/))
+- **[Project Context](./.project-context.md)**: Context for Claude sessions
 
 ### For Developers
 
 - **Specs**: [docs/specs/](./docs/specs/) - Feature specifications
-- **Rules**: [docs/rules/](./docs/rules/) - Recommendation rule definitions
-- **Prompts**: [.claude-code-prompts/](./.claude-code-prompts/) - Implementation prompts
-
----
-
-## Workflow
-
-### For Strategy & Design (Claude.ai)
-
-1. Review `.project-context.md` for project understanding
-2. Read `docs/v1-spec.md` for current scope
-3. Create feature specs in `docs/specs/`
-4. Generate implementation prompts in `.claude-code-prompts/`
-
-### For Implementation (Claude Code)
-
-1. Read `.project-context.md`
-2. Follow prompts in `.claude-code-prompts/[feature].md`
-3. Reference specs in `docs/specs/[feature].md`
-4. Test with demo data in `demo/`
+- **Rules**: [backend/src/analysis/recommendations.py](./backend/src/analysis/recommendations.py) - All 37 recommendation rules live in code
 
 ---
 
 ## Development Workflow
 
 ```bash
-# Start all services
-npm run dev:all
+# Backend tests (from backend/, with venv active)
+python test_normalizer.py
+python test_recommendations.py
+python test_error_clustering.py
 
-# Run tests
-npm test
-cd backend && pytest
-
-# Lint
-npm run lint
-cd backend && flake8
+# Frontend lint
+cd frontend && npm run lint
 
 # Database
-npm run db:migrate     # Run migrations
-npm run db:reset       # Reset to fresh state
-npm run db:seed        # Load demo data
+supabase db reset      # Re-apply all migrations from scratch (from repo root)
 
-# Build
-npm run build
-cd backend && python -m build
+# Frontend production build
+cd frontend && npm run build
 ```
-
----
-
-## Deployment
-
-### Frontend (Vercel)
-
-```bash
-vercel --prod
-```
-
-### Backend (Railway/Fly.io)
-
-```bash
-# Railway
-railway up
-
-# Fly.io
-flyctl deploy
-```
-
-### Database (Supabase)
-
-Migrations run automatically via Supabase CLI.
-
----
-
-## Demo
-
-**3 Demo Workflows Available**:
-
-1. **Sequential HTTP Hell** - Customer data enrichment (5 sequential APIs)
-2. **Credential Expiry Chaos** - Daily Slack reporter (auth failures)
-3. **Rate Limit Cascade** - Bulk user sync (100+ users)
-
-Load demo data:
-
-```bash
-npm run db:seed
-```
-
-Then navigate to `/workflows` and select a demo workflow.
 
 ---
 
@@ -274,7 +205,7 @@ Then navigate to `/workflows` and select a demo workflow.
 - Import-based workflow analysis
 - Critical path detection
 - Error clustering
-- 15 recommendation rules
+- 37 recommendation rules (19 performance / 13 reliability / 5 cost)
 - Evidence-first UI
 
 ### 🚧 Phase 2: Real-time Monitoring (Weeks 9-16)

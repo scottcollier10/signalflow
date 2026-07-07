@@ -1,6 +1,11 @@
 -- SignalFlow V1 Data Model
 -- PostgreSQL + pgvector (Supabase)
 -- Version: 1.0
+--
+-- HISTORICAL DOCUMENT — original design sketch, not the live schema.
+-- The live schema is defined by the migrations in supabase/migrations/.
+-- Known divergence: this file shows an IVFFlat index on embeddings; the
+-- live schema uses an HNSW index (20260111180000_error_clustering_tables.sql).
 
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
