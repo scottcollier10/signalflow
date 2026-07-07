@@ -7,6 +7,7 @@ It identifies patterns in errors across workflow executions and provides actiona
 Week 3 Day 3: Error Clustering & Pattern Detection
 """
 
+import ast
 from dataclasses import dataclass, asdict
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
@@ -107,11 +108,12 @@ class ErrorClusteringAnalyzer:
 
     This analyzer:
     1. Extracts errors from executions
-    2. Generates embeddings using HuggingFace models
+    2. Generates embeddings using a local sentence-transformers model
     3. Stores embeddings in pgvector-enabled database
-    4. Clusters similar errors using DBSCAN
-    5. Detects error patterns and assigns severity
-    6. Provides actionable insights with evidence
+    4. Retrieves similar historical errors via pgvector (HNSW index)
+    5. Clusters the candidate set using DBSCAN
+    6. Detects error patterns and assigns severity
+    7. Provides actionable insights with evidence
     """
 
     def __init__(self, supabase_client):
@@ -182,6 +184,7 @@ class ErrorClusteringAnalyzer:
         if include_historical:
             clusters = await self._cluster_errors(
                 workflow_id=workflow_id,
+                execution_id=execution_id,
                 execution_window=execution_window,
                 similarity_threshold=similarity_threshold
             )
@@ -354,28 +357,88 @@ class ErrorClusteringAnalyzer:
     # Phase 3: Clustering
     # =============================================================================
 
+    async def find_similar_errors(
+        self,
+        query_embedding: np.ndarray,
+        workflow_id: str,
+        match_count: int = 10,
+        max_distance: float = 0.25
+    ) -> List[Dict[str, Any]]:
+        """
+        Find historical errors similar to a query embedding using pgvector.
+
+        Calls the match_error_embeddings SQL function, which orders by
+        `embedding <=> query` (cosine distance) so Postgres can serve the
+        query from the HNSW index, scoped to a single workflow.
+
+        Args:
+            query_embedding: 384-dim embedding to search with
+            workflow_id: Only return errors from this workflow's executions
+            match_count: Maximum neighbors to return
+            max_distance: Cosine distance cutoff (distance = 1 - similarity)
+
+        Returns:
+            Embedding records (ascending distance), each with a parsed
+            numpy `embedding` and its `distance` from the query
+        """
+        embedding_list = [float(x) for x in np.asarray(query_embedding).tolist()]
+
+        response = self.db.rpc('match_error_embeddings', {
+            'query_embedding': embedding_list,
+            'target_workflow_id': workflow_id,
+            'match_count': match_count,
+            'max_distance': max_distance
+        }).execute()
+
+        results = response.data or []
+        for record in results:
+            record['embedding'] = self._parse_embedding(record['embedding'])
+
+        return results
+
     async def _cluster_errors(
         self,
         workflow_id: str,
+        execution_id: str,
         execution_window: int = 100,
         similarity_threshold: float = 0.75
     ) -> List[ErrorCluster]:
         """
-        Cluster all errors for a workflow using DBSCAN.
+        Cluster the current execution's errors with similar historical errors.
+
+        Candidate retrieval: for each error in the current execution, fetch
+        its nearest historical neighbors via pgvector (HNSW index), then run
+        DBSCAN over that candidate set only. Historical patterns with no
+        similar error in the current execution are not re-reported.
 
         Args:
             workflow_id: Workflow to analyze
-            execution_window: Number of recent executions to include
+            execution_id: Current execution (source of cluster seeds)
+            execution_window: Maximum neighbors to retrieve per current error
             similarity_threshold: Minimum similarity for same cluster
 
         Returns:
             List of ErrorCluster objects
         """
-        # Load embeddings for workflow
-        embeddings_data = await self._load_embeddings_for_workflow(
-            workflow_id,
-            limit=execution_window * 10  # Rough estimate of errors per execution
-        )
+        current = await self._load_embeddings_for_execution(execution_id)
+
+        if not current:
+            return []
+
+        # Retrieve similar historical errors for each current error
+        max_distance = 1 - similarity_threshold
+        candidates = {row['id']: row for row in current}
+        for row in current:
+            neighbors = await self.find_similar_errors(
+                query_embedding=row['embedding'],
+                workflow_id=workflow_id,
+                match_count=execution_window,
+                max_distance=max_distance
+            )
+            for neighbor in neighbors:
+                candidates.setdefault(neighbor['id'], neighbor)
+
+        embeddings_data = list(candidates.values())
 
         if len(embeddings_data) < 2:
             return []  # Need at least 2 errors to cluster
@@ -429,44 +492,23 @@ class ErrorClusteringAnalyzer:
 
         return clusters
 
-    async def _load_embeddings_for_workflow(
+    async def _load_embeddings_for_execution(
         self,
-        workflow_id: str,
-        limit: int = 1000
+        execution_id: str
     ) -> List[Dict[str, Any]]:
         """
-        Load error embeddings for a workflow.
+        Load error embeddings for a single execution.
 
         Returns:
-            List of embedding records with metadata
+            List of embedding records with parsed numpy embeddings
         """
         try:
-            # Get all executions for this workflow (recent first)
-            executions_response = self.db.table('executions').select(
-                'id'
-            ).eq('workflow_id', workflow_id).order('started_at', desc=True).limit(100).execute()
-
-            execution_ids = [e['id'] for e in executions_response.data]
-
-            if not execution_ids:
-                return []
-
-            # Get embeddings for these executions
             response = self.db.table('error_embeddings').select(
                 'id, execution_id, node_id, event_id, error_message, error_type, node_type, node_name, embedding'
-            ).in_('execution_id', execution_ids).limit(limit).execute()
+            ).eq('execution_id', execution_id).execute()
 
-            # Parse embedding strings back to arrays
             for record in response.data:
-                embedding_str = record['embedding']
-                if isinstance(embedding_str, str):
-                    # Parse the string representation back to a list
-                    # Format: "[1.0, 2.0, ...]"
-                    import ast
-                    embedding_list = ast.literal_eval(embedding_str)
-                    record['embedding'] = np.array(embedding_list, dtype=np.float32)
-                elif isinstance(embedding_str, list):
-                    record['embedding'] = np.array(embedding_str, dtype=np.float32)
+                record['embedding'] = self._parse_embedding(record['embedding'])
 
             return response.data
 
@@ -475,6 +517,13 @@ class ErrorClusteringAnalyzer:
             import traceback
             traceback.print_exc()
             return []
+
+    @staticmethod
+    def _parse_embedding(value) -> np.ndarray:
+        """Parse a pgvector column value ("[1.0, ...]" or list) to numpy."""
+        if isinstance(value, str):
+            value = ast.literal_eval(value)
+        return np.array(value, dtype=np.float32)
 
     async def _create_cluster_object(
         self,
