@@ -8,6 +8,7 @@ Week 3 Day 3: Error Clustering & Pattern Detection
 """
 
 import ast
+import logging
 from dataclasses import dataclass, asdict
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
@@ -17,6 +18,8 @@ from sklearn.metrics.pairwise import cosine_distances, cosine_similarity
 import uuid
 
 from .embeddings import ErrorEmbedder, ErrorEvent, clean_error_message
+
+logger = logging.getLogger(__name__)
 
 
 # ==================================================================================
@@ -170,7 +173,8 @@ class ErrorClusteringAnalyzer:
                 analysis_context={
                     "execution_id": execution_id,
                     "workflow_id": workflow_id,
-                    "include_historical": include_historical
+                    "include_historical": include_historical,
+                    "persistence_warnings": []
                 }
             )
 
@@ -182,14 +186,14 @@ class ErrorClusteringAnalyzer:
 
         # Phase 3: Cluster errors (current + historical)
         if include_historical:
-            clusters = await self._cluster_errors(
+            clusters, persistence_warnings = await self._cluster_errors(
                 workflow_id=workflow_id,
                 execution_id=execution_id,
                 execution_window=execution_window,
                 similarity_threshold=similarity_threshold
             )
         else:
-            clusters = []
+            clusters, persistence_warnings = [], []
 
         # Phase 4: Build result
         result = await self._build_analysis_result(
@@ -197,7 +201,8 @@ class ErrorClusteringAnalyzer:
             workflow_id=workflow_id,
             errors=errors,
             clusters=clusters,
-            include_historical=include_historical
+            include_historical=include_historical,
+            persistence_warnings=persistence_warnings
         )
 
         return result
@@ -402,7 +407,7 @@ class ErrorClusteringAnalyzer:
         execution_id: str,
         execution_window: int = 100,
         similarity_threshold: float = 0.75
-    ) -> List[ErrorCluster]:
+    ) -> Tuple[List[ErrorCluster], List[str]]:
         """
         Cluster the current execution's errors with similar historical errors.
 
@@ -418,12 +423,12 @@ class ErrorClusteringAnalyzer:
             similarity_threshold: Minimum similarity for same cluster
 
         Returns:
-            List of ErrorCluster objects
+            Tuple of (ErrorCluster list, persistence warning strings)
         """
         current = await self._load_embeddings_for_execution(execution_id)
 
         if not current:
-            return []
+            return [], []
 
         # Retrieve similar historical errors for each current error
         max_distance = 1 - similarity_threshold
@@ -441,7 +446,7 @@ class ErrorClusteringAnalyzer:
         embeddings_data = list(candidates.values())
 
         if len(embeddings_data) < 2:
-            return []  # Need at least 2 errors to cluster
+            return [], []  # Need at least 2 errors to cluster
 
         # Extract embeddings and metadata
         embeddings = np.array([e['embedding'] for e in embeddings_data])
@@ -487,10 +492,10 @@ class ErrorClusteringAnalyzer:
             )
             clusters.append(cluster)
 
-        # Store clusters in database
-        await self._store_clusters(clusters)
+        # Store clusters in database (failures are surfaced, not fatal)
+        persistence_warnings = await self._store_clusters(clusters)
 
-        return clusters
+        return clusters, persistence_warnings
 
     async def _load_embeddings_for_execution(
         self,
@@ -664,8 +669,16 @@ class ErrorClusteringAnalyzer:
         base_label = pattern_labels.get(pattern_type, 'Error Pattern')
         return f"{base_label} ({member_count} occurrences)"
 
-    async def _store_clusters(self, clusters: List[ErrorCluster]):
-        """Store clusters in database"""
+    async def _store_clusters(self, clusters: List[ErrorCluster]) -> List[str]:
+        """
+        Store clusters in database.
+
+        Returns:
+            Warning strings for clusters that failed to persist (empty on
+            full success). Failures are logged and surfaced to the caller;
+            they do not abort the analysis.
+        """
+        warnings = []
         for cluster in clusters:
             try:
                 self.db.table('error_clusters').insert({
@@ -691,7 +704,11 @@ class ErrorClusteringAnalyzer:
                     ).execute()
 
             except Exception as e:
-                print(f"Warning: Failed to store cluster {cluster.id}: {e}")
+                warning = f"Failed to store cluster {cluster.id} ({cluster.label}): {e}"
+                logger.warning(warning)
+                warnings.append(warning)
+
+        return warnings
 
     # =============================================================================
     # Phase 5: Result Building
@@ -703,7 +720,8 @@ class ErrorClusteringAnalyzer:
         workflow_id: str,
         errors: List[ErrorEvent],
         clusters: List[ErrorCluster],
-        include_historical: bool
+        include_historical: bool,
+        persistence_warnings: Optional[List[str]] = None
     ) -> ErrorAnalysisResult:
         """Build final analysis result for API response"""
 
@@ -757,6 +775,7 @@ class ErrorClusteringAnalyzer:
                 "execution_id": execution_id,
                 "workflow_id": workflow_id,
                 "include_historical": include_historical,
-                "similarity_threshold": 0.75
+                "similarity_threshold": 0.75,
+                "persistence_warnings": persistence_warnings or []
             }
         )
