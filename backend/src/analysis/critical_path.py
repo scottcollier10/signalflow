@@ -17,9 +17,12 @@ Space Complexity: O(V + E)
 """
 
 from typing import Dict, List, Optional, Tuple
+import logging
 from datetime import datetime, timedelta
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from collections import defaultdict, deque
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -36,6 +39,10 @@ class CriticalPathResult:
     skipped_nodes: int
     calculated_at: datetime
     from_cache: bool = False
+    # Execution event node_ids that could not be mapped to a workflow node.
+    # These are excluded from the graph and must be visible to callers --
+    # they are a parsing gap, not real off-path nodes.
+    unmapped_nodes: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict:
         """Convert to dictionary for API response"""
@@ -266,7 +273,10 @@ class CriticalPathAnalyzer:
                 unmapped_nodes.append(normalized_name)
 
         if unmapped_nodes:
-            print(f"Warning: Could not map {len(unmapped_nodes)} execution nodes to workflow UUIDs: {unmapped_nodes[:10]}")
+            logger.warning(
+                f"Could not map {len(unmapped_nodes)} execution nodes to "
+                f"workflow UUIDs: {unmapped_nodes[:10]}"
+            )
 
         # Build edges based on temporal ordering to create a DAG even if workflow has loops
         # For each node, find its immediate predecessor (the node that finished most recently before this one started)
@@ -306,6 +316,7 @@ class CriticalPathAnalyzer:
 
         return {
             'nodes': executed_nodes,
+            'unmapped_nodes': unmapped_nodes,
             'adjacency_list': dict(adjacency_list),
             'reverse_adjacency_list': dict(reverse_adjacency_list)
         }
@@ -480,7 +491,8 @@ class CriticalPathAnalyzer:
             total_nodes=total_nodes,
             skipped_nodes=skipped_nodes,
             calculated_at=datetime.utcnow(),
-            from_cache=False
+            from_cache=False,
+            unmapped_nodes=execution_graph.get('unmapped_nodes', [])
         )
 
     def _store_result(self, execution_id: str, workflow_id: str, result: CriticalPathResult):
@@ -542,7 +554,8 @@ class CriticalPathAnalyzer:
                         total_nodes=total_nodes,
                         skipped_nodes=skipped_nodes,
                         calculated_at=datetime.fromisoformat(cached['computed_at'].replace('Z', '+00:00')),
-                        from_cache=True
+                        from_cache=True,
+                        unmapped_nodes=execution_graph.get('unmapped_nodes', [])
                     )
         except Exception as e:
             # If cache lookup fails, just recalculate

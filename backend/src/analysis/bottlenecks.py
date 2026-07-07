@@ -20,8 +20,11 @@ Final Score: 0-100 integer
 from typing import Dict, List, Optional
 from datetime import datetime
 from dataclasses import dataclass, asdict
+import logging
 import statistics
 import math
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -51,6 +54,9 @@ class BottleneckAnalyzer:
 
     def __init__(self, supabase_client):
         self.db = supabase_client
+        # Execution event node_ids from the last analyze() call that could
+        # not be mapped to a workflow node. Exposed via get_summary().
+        self.unmapped_nodes: List[str] = []
 
     def analyze(self, execution_id: str, workflow_id: str, limit: int = 10) -> List[BottleneckScore]:
         """
@@ -82,7 +88,9 @@ class BottleneckAnalyzer:
         workflow_graph = self._load_workflow_graph(workflow_id)
 
         # Phase 3: Load node execution data (maps normalized names to UUIDs)
-        node_durations = self._load_node_durations(execution_id, workflow_graph)
+        node_durations, self.unmapped_nodes = self._load_node_durations(
+            execution_id, workflow_graph
+        )
 
         if not node_durations:
             raise ValueError(f"No execution data found for execution {execution_id}")
@@ -227,12 +235,13 @@ class BottleneckAnalyzer:
         """
         return node_name.lower().replace(" ", "_")
 
-    def _load_node_durations(self, execution_id: str, workflow_graph: Dict) -> Dict:
+    def _load_node_durations(self, execution_id: str, workflow_graph: Dict) -> tuple:
         """
         Load execution timing for all nodes from execution_events
         Maps normalized node names to UUIDs using workflow structure
 
         Returns:
+        Tuple of (node_durations, unmapped_node_ids) where node_durations is:
         {
             'node_uuid_1': {
                 'name': str,
@@ -243,6 +252,8 @@ class BottleneckAnalyzer:
             },
             ...
         }
+        and unmapped_node_ids lists event node_ids with no workflow match
+        (excluded from scoring, surfaced so they don't vanish silently).
         """
         # Build mapping from normalized name to UUID
         name_to_uuid = {}
@@ -278,6 +289,7 @@ class BottleneckAnalyzer:
 
         # Map to UUIDs and calculate aggregate duration
         result = {}
+        unmapped = []
         for normalized_id, data in node_data_by_normalized.items():
             # Map normalized name to UUID
             uuid = name_to_uuid.get(normalized_id)
@@ -290,9 +302,15 @@ class BottleneckAnalyzer:
                     'durations': data['durations']
                 }
             else:
-                print(f"Warning: Could not map normalized node '{normalized_id}' to UUID")
+                unmapped.append(normalized_id)
 
-        return result
+        if unmapped:
+            logger.warning(
+                f"Could not map {len(unmapped)} execution nodes to workflow "
+                f"UUIDs (excluded from scoring): {unmapped[:10]}"
+            )
+
+        return result, unmapped
 
     def _calculate_duration_factor(self, duration_ms: int, all_durations: List[int]) -> float:
         """
@@ -520,7 +538,10 @@ class BottleneckAnalyzer:
             'high_bottlenecks': severity_counts['high'],
             'medium_bottlenecks': severity_counts['medium'],
             'low_bottlenecks': severity_counts['low'],
-            'top_bottleneck_impact_percentage': round(top_bottleneck_impact, 1)
+            'top_bottleneck_impact_percentage': round(top_bottleneck_impact, 1),
+            # Event node_ids that could not be mapped to a workflow node in
+            # the last analyze() call -- excluded from scoring, not off-path
+            'unmapped_nodes': list(self.unmapped_nodes)
         }
 
     def get_optimization_verdict(self, bottlenecks: List[BottleneckScore], total_duration_ms: int, recommendation_count: int = None) -> Dict:
