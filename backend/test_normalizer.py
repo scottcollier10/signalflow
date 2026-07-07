@@ -1,5 +1,13 @@
 """
-Quick test script to verify the normalizer works correctly.
+Test the n8n execution normalizer (parser).
+
+Parses the committed fixture at fixtures/n8n_execution_sample.json (a 7-node
+n8n export: Webhook, Supabase, HTTP, Code, IF, Claude, Response) and asserts
+the normalized output. The old fixture (test_execution.json at repo root) was
+deleted in the repo cleanup and its name is .gitignore'd, so this uses a
+committed fixture instead.
+
+Run: venv/bin/python test_normalizer.py
 """
 
 import json
@@ -12,22 +20,30 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 from normalizer.parser import N8nExecutionParser
 from normalizer.models import EventType
 
+FIXTURE = Path(__file__).parent / "fixtures" / "n8n_execution_sample.json"
+
+EXPECTED_NODES = 7  # Webhook, Supabase, HTTP, Code, IF, Claude, Response
+EXPECTED_EVENTS = EXPECTED_NODES * 2  # Each node has STARTED and FINISHED
+
 
 def test_parser():
-    """Test the parser with sample execution JSON."""
+    """Test the parser with the sample execution fixture."""
 
-    # Load test execution
-    test_file = Path(__file__).parent.parent / "test_execution.json"
-    with open(test_file, 'r') as f:
+    with open(FIXTURE, 'r') as f:
         execution_json = json.load(f)
 
     print("=" * 60)
     print("Testing N8n Execution Parser")
     print("=" * 60)
 
-    # Parse
     parser = N8nExecutionParser(execution_json)
     normalized = parser.parse()
+
+    assert normalized.n8n_execution_id == "1042", normalized.n8n_execution_id
+    assert normalized.n8n_workflow_id == "wf-lead-enrichment", normalized.n8n_workflow_id
+    assert normalized.status == "success", normalized.status
+    assert normalized.duration_ms == 3500, normalized.duration_ms
+    assert normalized.trigger_mode == "webhook", normalized.trigger_mode
 
     print(f"\n✓ n8n Execution ID: {normalized.n8n_execution_id}")
     print(f"✓ n8n Workflow ID: {normalized.n8n_workflow_id}")
@@ -51,38 +67,37 @@ def test_parser():
     print("Validation")
     print("=" * 60)
 
-    # Validate
-    expected_nodes = 7  # Webhook, Supabase, HTTP, Code, IF, Claude, Response
-    expected_events = expected_nodes * 2  # Each node has START and FINISH
-
     actual_events = len(normalized.events)
+    assert actual_events == EXPECTED_EVENTS, (
+        f"Event count mismatch: expected {EXPECTED_EVENTS}, got {actual_events}"
+    )
+    print(f"✓ Event count matches: {actual_events} events")
 
-    if actual_events == expected_events:
-        print(f"✓ Event count matches: {actual_events} events")
-    else:
-        print(f"✗ Event count mismatch: expected {expected_events}, got {actual_events}")
-
-    # Check sequence ordering
-    sequence_correct = all(
-        normalized.events[i].sequence_order == i
+    # Sequence ordering is contiguous starting at 0
+    bad_sequence = [
+        (i, normalized.events[i].sequence_order)
         for i in range(len(normalized.events))
-    )
+        if normalized.events[i].sequence_order != i
+    ]
+    assert not bad_sequence, f"Sequence ordering has gaps or duplicates: {bad_sequence}"
+    print("✓ Sequence ordering is correct")
 
-    if sequence_correct:
-        print("✓ Sequence ordering is correct")
-    else:
-        print("✗ Sequence ordering has gaps or duplicates")
+    # Timestamps are chronological
+    out_of_order = [
+        i for i in range(len(normalized.events) - 1)
+        if normalized.events[i].timestamp > normalized.events[i + 1].timestamp
+    ]
+    assert not out_of_order, f"Timestamps out of order at indices: {out_of_order}"
+    print("✓ Timestamps are in chronological order")
 
-    # Check timestamps are in order
-    timestamps_ordered = all(
-        normalized.events[i].timestamp <= normalized.events[i+1].timestamp
-        for i in range(len(normalized.events)-1)
-    )
-
-    if timestamps_ordered:
-        print("✓ Timestamps are in chronological order")
-    else:
-        print("✗ Timestamps are not in order")
+    # Node names normalized to lowercase underscore ids
+    node_ids = {e.node_id for e in normalized.events}
+    expected_ids = {
+        "webhook", "supabase_get_config", "http_request", "code",
+        "if", "claude_ai_generate", "respond_to_webhook",
+    }
+    assert node_ids == expected_ids, f"Unexpected node ids: {node_ids ^ expected_ids}"
+    print("✓ Node ids normalized correctly")
 
     print("\n" + "=" * 60)
     print("SUCCESS - Parser works correctly!")

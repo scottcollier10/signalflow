@@ -1,8 +1,13 @@
 """
 Unit tests for Recommendation Engine
 
-Tests all 15 detection rules with mock data to verify the recommendation
+Tests the detection rules with mock data to verify the recommendation
 logic works correctly before testing with real workflow data.
+
+Uses real assertions and a nonzero exit code on failure (this file used to
+print ✅/❌ and always exit 0, so failures were invisible to CI/scripts).
+
+Run: venv/bin/python test_recommendations.py
 """
 
 import sys
@@ -320,6 +325,7 @@ async def test_recommendation_engine():
     )
 
     # Display results
+    assert result['success'] is True, f"Engine reported failure: {result!r}"
     print(f"\n✅ Success: {result['success']}")
     print(f"\n📊 Summary:")
     print(f"   Total recommendations: {result['data']['summary']['total_recommendations']}")
@@ -359,11 +365,14 @@ async def test_recommendation_engine():
 
     triggered_rules = {rec['rule_id']: rec['title'] for rec in result['data']['recommendations']}
 
+    missing_rules = [
+        f"#{rule_id} ({rule_name})"
+        for rule_id, rule_name in expected_rules.items()
+        if rule_id not in triggered_rules
+    ]
+    assert not missing_rules, f"Expected rules did not trigger: {missing_rules}"
     for rule_id, rule_name in expected_rules.items():
-        if rule_id in triggered_rules:
-            print(f"   ✅ Rule #{rule_id}: {rule_name}")
-        else:
-            print(f"   ⚠️  Rule #{rule_id}: {rule_name} (not triggered)")
+        print(f"   ✅ Rule #{rule_id}: {rule_name}")
 
     # Test priority calculation
     print(f"\n🔢 Priority Score Calculation:")
@@ -382,14 +391,15 @@ async def test_recommendation_engine():
     print(f"\n🔍 Evidence Validation:")
     print("-" * 80)
 
-    all_have_evidence = all(len(rec['evidence']) >= 1 for rec in result['data']['recommendations'])
-    all_have_links = all(
-        any(e.get('link') for e in rec['evidence'])
-        for rec in result['data']['recommendations']
-    )
+    no_evidence = [rec['rule_id'] for rec in result['data']['recommendations']
+                   if len(rec['evidence']) < 1]
+    assert not no_evidence, f"Recommendations without evidence: rules {no_evidence}"
+    print("   All recommendations have evidence: ✅ Yes")
 
-    print(f"   All recommendations have evidence: {'✅ Yes' if all_have_evidence else '❌ No'}")
-    print(f"   All recommendations have clickable links: {'✅ Yes' if all_have_links else '⚠️  Some missing'}")
+    no_links = [rec['rule_id'] for rec in result['data']['recommendations']
+                if not any(e.get('link') for e in rec['evidence'])]
+    assert not no_links, f"Recommendations without clickable links: rules {no_links}"
+    print("   All recommendations have clickable links: ✅ Yes")
 
     # Count recommendations with code examples
     with_code = sum(1 for rec in result['data']['recommendations'] if rec.get('code_example'))
@@ -399,18 +409,25 @@ async def test_recommendation_engine():
     print("✅ Test Complete!")
     print("=" * 80)
 
-    return result
+    return True
 
 
 async def test_priority_score_calculation():
-    """Test priority score calculation logic"""
+    """Test priority score calculation logic.
+
+    Formula (recommendations.py): (impact_score / effort_multiplier) * 100
+    - impact_score: CRITICAL=1.0, else min(time_saved_ms/10000, 1.0) or
+      min(error_count/20, 1.0); the ImpactLevel enum does NOT scale
+      time/error-based scores.
+    - effort multipliers: LOW=1.0, MEDIUM=0.7, HIGH=0.4
+
+    Expected values below are computed from that formula. (The old ranges
+    75-85 and 25-35 predated it and never matched the implementation.)
+    """
 
     print("\n" + "=" * 80)
     print("Testing Priority Score Calculation")
     print("=" * 80)
-
-    mock_client = MockSupabaseClient({})
-    engine = RecommendationEngine(mock_client)
 
     test_cases = [
         {
@@ -418,7 +435,8 @@ async def test_priority_score_calculation():
             'impact': ImpactLevel.HIGH,
             'effort': EffortLevel.LOW,
             'time_saved_ms': 10000,
-            'expected_range': (75, 85)
+            # min(10000/10000, 1.0) / 1.0 * 100
+            'expected': 100.0
         },
         {
             'name': 'Critical impact, high effort',
@@ -426,23 +444,29 @@ async def test_priority_score_calculation():
             'effort': EffortLevel.HIGH,
             'time_saved_ms': None,
             'error_count': 10,
-            'expected_range': (200, 260)
+            # CRITICAL pins impact_score to 1.0: 1.0 / 0.4 * 100
+            'expected': 250.0
         },
         {
             'name': 'Medium impact, medium effort',
             'impact': ImpactLevel.MEDIUM,
             'effort': EffortLevel.MEDIUM,
             'time_saved_ms': 5000,
-            'expected_range': (65, 75)
+            # min(5000/10000, 1.0) / 0.7 * 100, rounded to 1 decimal
+            'expected': 71.4
         },
         {
             'name': 'Low impact, low effort',
             'impact': ImpactLevel.LOW,
             'effort': EffortLevel.LOW,
             'time_saved_ms': 1000,
-            'expected_range': (25, 35)
+            # min(1000/10000, 1.0) / 1.0 * 100
+            'expected': 10.0
         }
     ]
+
+    mock_client = MockSupabaseClient({})
+    engine = RecommendationEngine(mock_client)
 
     for test in test_cases:
         rec = Recommendation(
@@ -461,24 +485,29 @@ async def test_priority_score_calculation():
         )
 
         score = engine._calculate_priority_score(rec)
-        rec.priority_score = score
 
-        expected_min, expected_max = test['expected_range']
-        passed = expected_min <= score <= expected_max
-
-        status = "✅" if passed else "❌"
-        print(f"\n{status} {test['name']}")
+        assert score == test['expected'], (
+            f"{test['name']}: expected {test['expected']}, got {score}"
+        )
+        print(f"\n✅ {test['name']}")
         print(f"   Impact: {test['impact'].value} | Effort: {test['effort'].value}")
-        print(f"   Priority Score: {score:.1f}/100 (expected: {expected_min}-{expected_max})")
+        print(f"   Priority Score: {score:.1f} (expected: {test['expected']})")
+
+    return True
+
+
+def main():
+    print("\n🚀 Starting Recommendation Engine Tests\n")
+
+    ok1 = asyncio.run(test_recommendation_engine())
+    ok2 = asyncio.run(test_priority_score_calculation())
+    success = ok1 and ok2
+
+    print("\n" + "=" * 80)
+    print("✅ ALL TESTS PASSED" if success else "❌ TESTS FAILED")
+    print("=" * 80)
+    return success
 
 
 if __name__ == "__main__":
-    print("\n🚀 Starting Recommendation Engine Tests\n")
-
-    # Run main test
-    result = asyncio.run(test_recommendation_engine())
-
-    # Run priority calculation test
-    asyncio.run(test_priority_score_calculation())
-
-    print("\n✅ All tests completed!\n")
+    exit(0 if main() else 1)

@@ -1,0 +1,67 @@
+{
+  "id": "1042",
+  "finished": true,
+  "mode": "webhook",
+  "startedAt": "2026-01-15T10:00:00.000Z",
+  "stoppedAt": "2026-01-15T10:00:03.500Z",
+  "workflowId": "wf-lead-enrichment",
+  "workflowData": {
+    "id": "wf-lead-enrichment",
+    "name": "Lead Enrichment Pipeline"
+  },
+  "data": {
+    "resultData": {
+      "runData": {
+        "Webhook": [
+          {
+            "startTime": 1768471200000,
+            "executionTime": 5,
+            "executionStatus": "success"
+          }
+        ],
+        "Supabase Get Config": [
+          {
+            "startTime": 1768471200010,
+            "executionTime": 120,
+            "executionStatus": "success"
+          }
+        ],
+        "HTTP Request": [
+          {
+            "startTime": 1768471200140,
+            "executionTime": 850,
+            "executionStatus": "success"
+          }
+        ],
+        "Code": [
+          {
+            "startTime": 1768471201000,
+            "executionTime": 45,
+            "executionStatus": "success"
+          }
+        ],
+        "IF": [
+          {
+            "startTime": 1768471201050,
+            "executionTime": 3,
+            "executionStatus": "success"
+          }
+        ],
+        "Claude AI Generate": [
+          {
+            "startTime": 1768471201060,
+            "executionTime": 2400,
+            "executionStatus": "success"
+          }
+        ],
+        "Respond to Webhook": [
+          {
+            "startTime": 1768471203470,
+            "executionTime": 8,
+            "executionStatus": "success"
+          }
+        ]
+      }
+    }
+  }
+}
