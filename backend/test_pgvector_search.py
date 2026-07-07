@@ -162,6 +162,9 @@ def seed(db, embedder):
 
 
 def cleanup(db, ids):
+    # Deleting workflows cascades to everything seeded here: nodes and
+    # executions (ON DELETE CASCADE), executions to execution_events and
+    # error_embeddings, and error_clusters via its workflow_id FK.
     for wf in ("wf_a", "wf_b"):
         if ids.get(wf):
             db.table("workflows").delete().eq("id", ids[wf]).execute()
@@ -240,9 +243,9 @@ async def test_cluster_via_vector_candidates(db, ids):
         f"{[(c['pattern_type'], c['member_count']) for c in result.clusters]}"
     )
     members = timeout_clusters[0]["member_count"]
-    assert members >= 3, (
+    assert members == 4, (
         f"Timeout cluster should include historical neighbors via vector search "
-        f"(expected >=3 members: 2 current + 2 historical), got {members}"
+        f"(expected exactly 4 members: 2 current + 2 historical), got {members}"
     )
     print(f"  ✓ Timeout cluster includes historical neighbors ({members} members)")
 
