@@ -23,6 +23,9 @@ out/
 .env.*
 .env.local
 .env.*.local
+# ...but env templates are meant to be committed
+!.env.local.example
+!.env.example
 
 # IDE
 .vscode/

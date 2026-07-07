@@ -19,6 +19,7 @@ import {
   fetchBottlenecks,
   fetchRecommendations,
 } from '@/lib/api/analysis';
+import { API_BASE_URL } from '@/lib/api/config';
 
 interface ExecutionVisualizerProps {
   workflowId: string;
@@ -38,7 +39,7 @@ interface ExecutionVisualizerProps {
 export function ExecutionVisualizer({
   workflowId,
   executionId,
-  apiBaseUrl = 'http://localhost:8001',
+  apiBaseUrl = API_BASE_URL,
   onBack,
   initialBottlenecks,
   initialRecommendations,

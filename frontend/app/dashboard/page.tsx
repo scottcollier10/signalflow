@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { AppLayout } from '@/components/layout';
 import { ExecutionCard, WorkflowGroup, ExecutionData } from '@/components/dashboard';
 import { StepProgress } from '@/components/StepProgress';
+import { API_BASE_URL } from '@/lib/api/config';
 
 type FilterType = 'all' | 'success' | 'error';
 type GroupBy = 'workflow' | 'date' | 'none';
@@ -37,7 +38,7 @@ export default function DashboardPage() {
       setError(null);
 
       // Fetch all executions
-      const response = await fetch('http://localhost:8001/api/executions');
+      const response = await fetch(`${API_BASE_URL}/api/executions`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch executions');
@@ -88,7 +89,7 @@ export default function DashboardPage() {
     }
 
     try {
-      const response = await fetch(`http://localhost:8001/api/executions/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/executions/${id}`, {
         method: 'DELETE',
       });
 

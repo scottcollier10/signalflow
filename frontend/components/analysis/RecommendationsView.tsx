@@ -20,6 +20,7 @@ import { FilterControls } from './FilterControls';
 import { generateClaudeCodePrompt, generatePromptSummary, PromptGeneratorInput } from '@/lib/promptGenerator';
 import { sanitizeWorkflowJSON } from '@/lib/workflowSanitizer';
 import { updateStepProgress } from '@/components/StepProgress';
+import { API_BASE_URL } from '@/lib/api/config';
 
 type ViewMode = 'list' | 'grouped';
 
@@ -177,7 +178,7 @@ export function RecommendationsView({
       setWorkflowJSONLoading(true);
 
       const response = await fetch(
-        `http://localhost:8001/api/workflows/${exportData.workflowId}/raw-json`
+        `${API_BASE_URL}/api/workflows/${exportData.workflowId}/raw-json`
       );
 
       if (!response.ok) {

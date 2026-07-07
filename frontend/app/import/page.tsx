@@ -10,6 +10,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout';
 import { updateStepProgress } from '@/components/StepProgress';
+import { API_BASE_URL } from '@/lib/api/config';
 
 type ImportMethod = 'file' | 'paste' | 'fetch';
 
@@ -133,7 +134,7 @@ export default function ImportPage() {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch('http://localhost:8001/api/normalize-execution', {
+    const response = await fetch(`${API_BASE_URL}/api/normalize-execution`, {
       method: 'POST',
       body: formData,
     });
@@ -176,7 +177,7 @@ export default function ImportPage() {
 
     try {
       // Use backend proxy to avoid CORS issues
-      const response = await fetch('http://localhost:8001/api/n8n/fetch-execution', {
+      const response = await fetch(`${API_BASE_URL}/api/n8n/fetch-execution`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -260,7 +261,7 @@ export default function ImportPage() {
       formData.append('file', fileToUpload);
 
       // POST to backend
-      const response = await fetch('http://localhost:8001/api/normalize-execution', {
+      const response = await fetch(`${API_BASE_URL}/api/normalize-execution`, {
         method: 'POST',
         body: formData,
       });

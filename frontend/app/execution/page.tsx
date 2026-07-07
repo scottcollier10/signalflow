@@ -9,6 +9,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ExecutionVisualizer } from '@/components/execution-visualizer';
+import { API_BASE_URL } from '@/lib/api/config';
 
 interface ExecutionInfo {
   id: string;
@@ -24,7 +25,7 @@ export default function ExecutionTestPage() {
   useEffect(() => {
     const fetchLatestExecution = async () => {
       try {
-        const response = await fetch('http://localhost:8001/api/executions?limit=1');
+        const response = await fetch(`${API_BASE_URL}/api/executions?limit=1`);
         if (!response.ok) {
           throw new Error('Failed to fetch executions');
         }
@@ -85,7 +86,7 @@ export default function ExecutionTestPage() {
     <ExecutionVisualizer
       workflowId={execution.workflow_id}
       executionId={execution.id}
-      apiBaseUrl="http://localhost:8001"
+      apiBaseUrl={API_BASE_URL}
     />
   );
 }

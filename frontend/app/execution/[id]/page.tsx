@@ -25,6 +25,7 @@ import {
   Recommendation,
   fetchAnalysisData,
 } from '@/lib/api/analysis';
+import { API_BASE_URL } from '@/lib/api/config';
 
 interface ExecutionPageProps {
   params: Promise<{ id: string }>;
@@ -80,7 +81,7 @@ export default function ExecutionPage({ params }: ExecutionPageProps) {
   useEffect(() => {
     const fetchExecutionCount = async () => {
       try {
-        const response = await fetch('http://localhost:8001/api/executions');
+        const response = await fetch(`${API_BASE_URL}/api/executions`);
         if (response.ok) {
           const data = await response.json();
           const executionsList = Array.isArray(data) ? data : (data.executions || data.data || []);
@@ -135,7 +136,7 @@ export default function ExecutionPage({ params }: ExecutionPageProps) {
 
         // Fetch execution metadata
         const execResponse = await fetch(
-          `http://localhost:8001/api/executions/${executionId}`
+          `${API_BASE_URL}/api/executions/${executionId}`
         );
 
         if (!execResponse.ok) {
@@ -155,7 +156,7 @@ export default function ExecutionPage({ params }: ExecutionPageProps) {
 
         // Fetch analysis data
         const analysis = await fetchAnalysisData(
-          'http://localhost:8001',
+          API_BASE_URL,
           execData.workflow_id,
           executionId
         );
@@ -303,7 +304,7 @@ export default function ExecutionPage({ params }: ExecutionPageProps) {
             <ExecutionVisualizer
               workflowId={executionMeta.workflow_id}
               executionId={executionId}
-              apiBaseUrl="http://localhost:8001"
+              apiBaseUrl={API_BASE_URL}
               embedded={true}
               hasStepProgress={executionCount < 3}
               initialBottlenecks={analysisData?.bottlenecks?.bottlenecks}

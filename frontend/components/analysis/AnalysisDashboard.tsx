@@ -20,6 +20,7 @@ import { BottleneckView } from './BottleneckView';
 import { ErrorClustersSection } from './ErrorClustersSection';
 import { RecommendationsView } from './RecommendationsView';
 import { EvidenceDrawer } from './EvidenceDrawer';
+import { API_BASE_URL } from '@/lib/api/config';
 
 type TabType = 'overview' | 'critical-path' | 'bottlenecks' | 'errors' | 'recommendations';
 
@@ -46,7 +47,7 @@ interface ExecutionMetadata {
 
 export default function AnalysisDashboard({
   executionId,
-  apiBaseUrl = 'http://localhost:8001',
+  apiBaseUrl = API_BASE_URL,
 }: AnalysisDashboardProps) {
   // Data state
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);

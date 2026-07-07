@@ -9,6 +9,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { API_BASE_URL } from '@/lib/api/config';
 
 // API response types
 interface BottleneckCounts {
@@ -225,7 +226,7 @@ function ComparisonContent() {
       setError(null);
 
       const response = await fetch(
-        `http://localhost:8001/api/compare?exec_a=${execA}&exec_b=${execB}`
+        `${API_BASE_URL}/api/compare?exec_a=${execA}&exec_b=${execB}`
       );
 
       if (!response.ok) {
