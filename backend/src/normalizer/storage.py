@@ -6,7 +6,10 @@ from typing import List, Optional
 from supabase import create_client, Client
 from .models import NormalizedExecution, ExecutionEvent
 from ..config import settings
+import logging
 import uuid
+
+logger = logging.getLogger(__name__)
 
 
 class ExecutionStorage:
@@ -145,10 +148,13 @@ class ExecutionStorage:
             print(f"[storage] Storage complete. Returning UUID: {execution_uuid}")
             return execution_uuid
 
-        except Exception as e:
-            print(f"[storage] Error storing execution: {e}")
-            import traceback
-            traceback.print_exc()
+        except Exception:
+            # Callers treat None as "storage failed" and return a 500 to the
+            # client; the real failure lives here in the server log.
+            logger.exception(
+                "Failed to store execution (n8n_execution_id=%s)",
+                normalized.n8n_execution_id
+            )
             return None
 
     async def get_execution_events(

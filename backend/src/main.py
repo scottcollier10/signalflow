@@ -13,7 +13,35 @@ from src.analysis.comparison import ComparisonAnalyzer
 from supabase import create_client
 from datetime import datetime
 import json
+import logging
 import httpx
+
+logger = logging.getLogger("signalflow.api")
+
+# Cap for uploaded execution files. Real n8n exports are typically well under
+# 10MB; anything larger is either malformed or not worth parsing in-memory.
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+
+
+async def _read_execution_upload(file: UploadFile) -> dict:
+    """Read an uploaded execution file with size and shape validation."""
+    content = await file.read()
+
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large. Execution uploads are capped at {MAX_UPLOAD_BYTES // (1024 * 1024)}MB."
+        )
+
+    execution_json = json.loads(content)
+
+    if not isinstance(execution_json, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="Expected a JSON object (an n8n execution export), got a different JSON type."
+        )
+
+    return execution_json
 
 
 class N8nFetchRequest(BaseModel):
@@ -55,9 +83,7 @@ async def parse_execution(file: UploadFile = File(...)):
     Use this to test the parser without needing database connectivity.
     """
     try:
-        # Read uploaded file
-        content = await file.read()
-        execution_json = json.loads(content)
+        execution_json = await _read_execution_upload(file)
 
         # Parse and normalize
         parser = N8nExecutionParser(execution_json)
@@ -75,8 +101,14 @@ async def parse_execution(file: UploadFile = File(...)):
 
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=400, detail=f"Invalid JSON: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to parse uploaded execution")
+        raise HTTPException(
+            status_code=400,
+            detail="Unable to parse execution file. Check that it is a valid n8n execution export."
+        )
 
 
 @app.post("/api/normalize-execution")
@@ -86,9 +118,7 @@ async def normalize_execution(file: UploadFile = File(...)):
     Stores normalized events in database.
     """
     try:
-        # Read uploaded file
-        content = await file.read()
-        execution_json = json.loads(content)
+        execution_json = await _read_execution_upload(file)
 
         # Parse and normalize
         parser = N8nExecutionParser(execution_json)
@@ -111,8 +141,14 @@ async def normalize_execution(file: UploadFile = File(...)):
 
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=400, detail=f"Invalid JSON: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to normalize uploaded execution")
+        raise HTTPException(
+            status_code=400,
+            detail="Unable to process execution file. Check that it is a valid n8n execution export."
+        )
 
 
 @app.get("/api/executions/{execution_id}/events")
@@ -147,8 +183,9 @@ async def get_workflows():
             "workflows": workflows
         }
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Failed to list workflows")
+        raise HTTPException(status_code=500, detail="Failed to retrieve workflows")
 
 
 @app.get("/api/workflows/{workflow_id}")
@@ -168,8 +205,9 @@ async def get_workflow_graph(workflow_id: str):
 
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Failed to build workflow graph for %s", workflow_id)
+        raise HTTPException(status_code=500, detail="Failed to retrieve workflow graph")
 
 
 @app.get("/api/workflows/{workflow_id}/raw-json")
@@ -208,8 +246,9 @@ async def get_workflow_raw_json(workflow_id: str):
 
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Failed to fetch raw JSON for workflow %s", workflow_id)
+        raise HTTPException(status_code=500, detail="Failed to retrieve workflow JSON")
 
 
 @app.get("/api/workflows/{workflow_id}/executions/{execution_id}")
@@ -237,8 +276,9 @@ async def get_execution_graph(workflow_id: str, execution_id: str):
 
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Failed to build execution graph for %s", execution_id)
+        raise HTTPException(status_code=500, detail="Failed to retrieve execution graph")
 
 
 @app.get("/api/workflows/{workflow_id}/executions/{execution_id}/critical-path")
@@ -276,8 +316,9 @@ async def get_critical_path(workflow_id: str, execution_id: str):
         )
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Failed to calculate critical path for %s", execution_id)
+        raise HTTPException(status_code=500, detail="Failed to calculate critical path")
 
 
 @app.get("/api/workflows/{workflow_id}/executions/{execution_id}/bottlenecks")
@@ -415,8 +456,9 @@ async def get_bottlenecks(
             )
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Failed to analyze bottlenecks for %s", execution_id)
+        raise HTTPException(status_code=500, detail="Failed to analyze bottlenecks")
 
 
 @app.get("/api/workflows/{workflow_id}/executions/{execution_id}/error-analysis")
@@ -501,9 +543,9 @@ async def get_error_analysis(
         )
     except HTTPException:
         raise
-    except Exception as e:
-        print(f"Error in error analysis: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Failed to analyze errors for %s", execution_id)
+        raise HTTPException(status_code=500, detail="Failed to analyze errors")
 
 
 @app.get("/api/workflows/{workflow_id}/executions/{execution_id}/recommendations")
@@ -584,9 +626,9 @@ async def get_recommendations(workflow_id: str, execution_id: str):
         )
     except HTTPException:
         raise
-    except Exception as e:
-        print(f"Error generating recommendations: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Failed to generate recommendations for %s", execution_id)
+        raise HTTPException(status_code=500, detail="Failed to generate recommendations")
 
 
 # =============================================================================
@@ -674,9 +716,9 @@ async def list_executions(limit: int = 100, status: str = None):
 
         return enriched
 
-    except Exception as e:
-        print(f"Error listing executions: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Failed to list executions")
+        raise HTTPException(status_code=500, detail="Failed to retrieve executions")
 
 
 @app.delete("/api/executions/{execution_id}")
@@ -700,9 +742,9 @@ async def delete_execution(execution_id: str):
 
         return {"success": True, "message": f"Execution {execution_id} deleted"}
 
-    except Exception as e:
-        print(f"Error deleting execution: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Failed to delete execution %s", execution_id)
+        raise HTTPException(status_code=500, detail="Failed to delete execution")
 
 
 @app.get("/api/executions/{execution_id}")
@@ -754,9 +796,9 @@ async def get_execution(execution_id: str):
 
     except HTTPException:
         raise
-    except Exception as e:
-        print(f"Error fetching execution: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Failed to fetch execution %s", execution_id)
+        raise HTTPException(status_code=500, detail="Failed to retrieve execution")
 
 
 @app.get("/api/executions/{execution_id}/full")
@@ -780,8 +822,9 @@ async def get_execution_full(execution_id: str):
 
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Failed to fetch full execution %s", execution_id)
+        raise HTTPException(status_code=500, detail="Failed to retrieve execution")
 
 
 @app.get("/api/workflows/{workflow_id}/info")
@@ -807,8 +850,9 @@ async def get_workflow_info(workflow_id: str):
 
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Failed to fetch workflow info for %s", workflow_id)
+        raise HTTPException(status_code=500, detail="Failed to retrieve workflow")
 
 
 @app.get("/api/workflows/{workflow_id}/executions")
@@ -846,8 +890,9 @@ async def get_workflow_executions(workflow_id: str, limit: int = 50):
 
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Failed to list executions for workflow %s", workflow_id)
+        raise HTTPException(status_code=500, detail="Failed to retrieve workflow executions")
 
 
 @app.get("/api/workflows/by-execution/{execution_id}")
@@ -895,8 +940,9 @@ async def get_workflow_by_execution(execution_id: str):
 
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Failed to fetch workflow for execution %s", execution_id)
+        raise HTTPException(status_code=500, detail="Failed to retrieve workflow for execution")
 
 
 @app.post("/api/n8n/fetch-execution")
@@ -1038,21 +1084,22 @@ async def fetch_n8n_execution(request: N8nFetchRequest):
             status_code=504,
             detail="Timeout connecting to n8n API. Check if the URL is correct."
         )
-    except httpx.RequestError as e:
+    except httpx.RequestError:
+        logger.exception("Could not connect to n8n at %s", request.n8n_url)
         raise HTTPException(
             status_code=502,
-            detail=f"Failed to connect to n8n: {str(e)}"
+            detail="Failed to connect to n8n. Check the URL and that the instance is reachable."
         )
     except json.JSONDecodeError:
         raise HTTPException(
             status_code=502,
             detail="Invalid JSON response from n8n API"
         )
-    except Exception as e:
-        print(f"Error fetching from n8n: {e}")
+    except Exception:
+        logger.exception("Failed to process execution fetched from n8n")
         raise HTTPException(
             status_code=500,
-            detail=f"Error processing execution: {str(e)}"
+            detail="Error processing execution fetched from n8n"
         )
 
 
@@ -1105,8 +1152,12 @@ async def test_n8n_connection(request: N8nTestConnectionRequest):
 
     except httpx.TimeoutException:
         raise HTTPException(status_code=504, detail="Connection timed out")
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=502, detail=f"Could not reach n8n instance: {str(e)}")
+    except httpx.RequestError:
+        logger.exception("Could not reach n8n instance at %s", url)
+        raise HTTPException(
+            status_code=502,
+            detail="Could not reach n8n instance. Check the URL and that n8n is running."
+        )
 
 
 @app.delete("/api/executions/all")
@@ -1148,9 +1199,9 @@ async def delete_all_executions():
             "message": f"Deleted {deleted_count} executions and all related data"
         }
 
-    except Exception as e:
-        print(f"Error deleting all executions: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Failed to delete all executions")
+        raise HTTPException(status_code=500, detail="Failed to delete executions")
 
 
 @app.get("/api/compare")
@@ -1200,10 +1251,11 @@ async def compare_executions(exec_a: str, exec_b: str):
         }
 
     except ValueError as e:
+        # Raised deliberately by the analyzer with client-safe messages
         raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        print(f"Error comparing executions: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Failed to compare executions %s vs %s", exec_a, exec_b)
+        raise HTTPException(status_code=500, detail="Failed to compare executions")
 
 
 # TODO: Add endpoints for:
