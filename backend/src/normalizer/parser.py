@@ -91,13 +91,21 @@ class N8nExecutionParser:
                 execution_time = run.get("executionTime", 0)
                 error = run.get("error")
 
+                # Modern n8n only sets a top-level error when the node fails
+                # the execution. Continue-on-fail nodes (onError: 'continue*')
+                # instead emit an output item shaped {"json": {"error": msg}}.
+                if error:
+                    error_message = error.get("message", "Unknown error")
+                else:
+                    error_message = self._continue_on_fail_error(run)
+
                 # Calculate end timestamp
                 if start_time and execution_time:
                     end_time = start_time + timedelta(milliseconds=execution_time)
                 else:
                     end_time = start_time or datetime.now()
 
-                if error:
+                if error_message:
                     # Error event
                     events.append(ExecutionEvent(
                         execution_id=execution_id,
@@ -106,7 +114,7 @@ class N8nExecutionParser:
                         timestamp=end_time,
                         duration_ms=execution_time,
                         status=EventStatus.ERROR,
-                        error_message=error.get("message", "Unknown error"),
+                        error_message=error_message,
                         sequence_order=sequence,
                         retry_attempt=run_idx
                     ))
@@ -133,6 +141,26 @@ class N8nExecutionParser:
             event.sequence_order = idx
 
         return events
+
+    @staticmethod
+    def _continue_on_fail_error(run: Dict[str, Any]) -> Optional[str]:
+        """
+        Extract a continue-on-fail error message from a run's output items.
+
+        Only items whose json is EXACTLY {"error": <message>} count — that is
+        the shape n8n emits for continued failures. Payloads that merely
+        contain an 'error' key among other data are normal output.
+        """
+        for branch in (run.get("data", {}).get("main") or []):
+            for item in (branch or []):
+                payload = item.get("json") if isinstance(item, dict) else None
+                if isinstance(payload, dict) and set(payload.keys()) == {"error"}:
+                    err = payload["error"]
+                    if isinstance(err, str) and err:
+                        return err
+                    if isinstance(err, dict) and err.get("message"):
+                        return err["message"]
+        return None
 
     def _parse_timestamp(self, ts: Any) -> Optional[datetime]:
         """Parse timestamp from various formats."""
