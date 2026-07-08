@@ -52,9 +52,9 @@ BOTTLENECK-BASED RULES (36-41):
 40. High Variance Node → Stabilize performance
 41. Orphaned Bottleneck → Surface bottlenecks no other rule covered
 
-Priority Score Formula: (impact_score / effort_multiplier) * 100
-- Impact score: 0-1 (based on time_saved or error_count)
-- Effort multipliers: LOW=1.0, MEDIUM=0.7, HIGH=0.4
+Priority Score Formula: impact_score * effort_multiplier * 100 (0-100)
+- Impact score: 0-1 (based on time_saved or error_count; CRITICAL=1.0)
+- Effort multipliers (discount factors): LOW=1.0, MEDIUM=0.7, HIGH=0.4
 """
 
 from typing import Dict, List, Optional
@@ -2498,12 +2498,19 @@ function validateInput(data) {
 
     def _calculate_priority_score(self, rec: Recommendation) -> float:
         """
-        Calculate priority score: (impact_score / effort_multiplier) * 100
+        Calculate priority score: impact_score * effort_multiplier * 100
 
         Impact score (0-1):
         - Time-based: min(time_saved_ms / 10000, 1.0)  # 10s = max score
         - Error-based: min(error_count / 20, 1.0)  # 20 errors = max score
         - Critical impact: 1.0
+
+        Effort multipliers (LOW=1.0, MEDIUM=0.7, HIGH=0.4) are discount
+        factors: at equal impact, easier fixes rank higher (quick wins
+        first), and the result stays within the 0-100 range the
+        priority_score field and the frontend's "/100" displays promise.
+        (This used to divide by the multiplier, which both inverted the
+        effort ordering and produced scores up to 250.)
         """
         # Determine impact score
         if rec.impact == ImpactLevel.CRITICAL:
@@ -2525,7 +2532,7 @@ function validateInput(data) {
         effort_multiplier = self.EFFORT_MULTIPLIERS[rec.effort]
 
         # Calculate priority
-        priority = (impact_score / effort_multiplier) * 100
+        priority = impact_score * effort_multiplier * 100
 
         return round(priority, 1)
 

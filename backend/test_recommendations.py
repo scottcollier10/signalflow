@@ -391,6 +391,12 @@ async def test_recommendation_engine():
     print(f"\n🔍 Evidence Validation:")
     print("-" * 80)
 
+    # priority_score is documented as 0-100 (dataclass field, frontend "/100")
+    out_of_range = [(rec['rule_id'], rec['priority_score'])
+                    for rec in result['data']['recommendations']
+                    if not 0 <= rec['priority_score'] <= 100]
+    assert not out_of_range, f"priority_score outside 0-100: {out_of_range}"
+
     no_evidence = [rec['rule_id'] for rec in result['data']['recommendations']
                    if len(rec['evidence']) < 1]
     assert not no_evidence, f"Recommendations without evidence: rules {no_evidence}"
@@ -415,14 +421,14 @@ async def test_recommendation_engine():
 async def test_priority_score_calculation():
     """Test priority score calculation logic.
 
-    Formula (recommendations.py): (impact_score / effort_multiplier) * 100
+    Formula (recommendations.py): impact_score * effort_multiplier * 100
     - impact_score: CRITICAL=1.0, else min(time_saved_ms/10000, 1.0) or
       min(error_count/20, 1.0); the ImpactLevel enum does NOT scale
       time/error-based scores.
-    - effort multipliers: LOW=1.0, MEDIUM=0.7, HIGH=0.4
-
-    Expected values below are computed from that formula. (The old ranges
-    75-85 and 25-35 predated it and never matched the implementation.)
+    - effort multipliers are discount factors: LOW=1.0, MEDIUM=0.7, HIGH=0.4,
+      so at equal impact, easier fixes rank higher (quick wins first) and the
+      score is bounded to 0-100 as the Recommendation.priority_score field
+      and the frontend's "/100" displays promise.
     """
 
     print("\n" + "=" * 80)
@@ -435,7 +441,7 @@ async def test_priority_score_calculation():
             'impact': ImpactLevel.HIGH,
             'effort': EffortLevel.LOW,
             'time_saved_ms': 10000,
-            # min(10000/10000, 1.0) / 1.0 * 100
+            # min(10000/10000, 1.0) * 1.0 * 100
             'expected': 100.0
         },
         {
@@ -444,23 +450,23 @@ async def test_priority_score_calculation():
             'effort': EffortLevel.HIGH,
             'time_saved_ms': None,
             'error_count': 10,
-            # CRITICAL pins impact_score to 1.0: 1.0 / 0.4 * 100
-            'expected': 250.0
+            # CRITICAL pins impact_score to 1.0: 1.0 * 0.4 * 100
+            'expected': 40.0
         },
         {
             'name': 'Medium impact, medium effort',
             'impact': ImpactLevel.MEDIUM,
             'effort': EffortLevel.MEDIUM,
             'time_saved_ms': 5000,
-            # min(5000/10000, 1.0) / 0.7 * 100, rounded to 1 decimal
-            'expected': 71.4
+            # min(5000/10000, 1.0) * 0.7 * 100
+            'expected': 35.0
         },
         {
             'name': 'Low impact, low effort',
             'impact': ImpactLevel.LOW,
             'effort': EffortLevel.LOW,
             'time_saved_ms': 1000,
-            # min(1000/10000, 1.0) / 1.0 * 100
+            # min(1000/10000, 1.0) * 1.0 * 100
             'expected': 10.0
         }
     ]
@@ -486,12 +492,33 @@ async def test_priority_score_calculation():
 
         score = engine._calculate_priority_score(rec)
 
+        assert 0 <= score <= 100, (
+            f"{test['name']}: score {score} outside the documented 0-100 range"
+        )
         assert score == test['expected'], (
             f"{test['name']}: expected {test['expected']}, got {score}"
         )
         print(f"\n✅ {test['name']}")
         print(f"   Impact: {test['impact'].value} | Effort: {test['effort'].value}")
         print(f"   Priority Score: {score:.1f} (expected: {test['expected']})")
+
+    # Quick wins first: at equal impact, LOW effort must outrank HIGH effort
+    def make_rec(effort):
+        return Recommendation(
+            id="test", rule_id=1, title="Test", description="Test",
+            evidence=[], impact=ImpactLevel.HIGH, impact_details="Test",
+            effort=effort, priority_score=0.0,
+            category=RecommendationCategory.PERFORMANCE, time_saved_ms=8000,
+        )
+
+    low_score = engine._calculate_priority_score(make_rec(EffortLevel.LOW))
+    high_score = engine._calculate_priority_score(make_rec(EffortLevel.HIGH))
+    assert low_score > high_score, (
+        f"Equal impact: LOW effort ({low_score}) should outrank "
+        f"HIGH effort ({high_score})"
+    )
+    print(f"\n✅ Quick wins first: equal impact ranks LOW effort ({low_score}) "
+          f"above HIGH effort ({high_score})")
 
     return True
 

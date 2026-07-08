@@ -167,16 +167,16 @@ export function AnalysisOverview({ data, onViewEvidence, onTabChange }: Analysis
                 Ranks recommendations by potential value using this formula:
               </p>
               <div className="bg-neu-shadow-dark/30 rounded p-3 font-mono text-sm text-center mb-3 text-neu-text">
-                priority = (impact_score / effort) × 100
+                priority = impact_score × effort_multiplier × 100
               </div>
               <div className="space-y-2 text-sm">
                 <div>
-                  <strong className="text-neu-text">Impact Score:</strong>
-                  <span className="text-neu-text-muted ml-2">Critical=100, High=75, Medium=50, Low=25</span>
+                  <strong className="text-neu-text">Impact Score (0-1):</strong>
+                  <span className="text-neu-text-muted ml-2">Critical=1.0; otherwise scaled from time saved (10s = 1.0) or error count (20 = 1.0)</span>
                 </div>
                 <div>
                   <strong className="text-neu-text">Effort Multiplier:</strong>
-                  <span className="text-neu-text-muted ml-2">Low=0.5, Medium=1.0, High=1.5</span>
+                  <span className="text-neu-text-muted ml-2">Low=1.0, Medium=0.7, High=0.4 — easier fixes rank higher at equal impact</span>
                 </div>
               </div>
               <div className="mt-4 pt-3 border-t border-neu-shadow-light/30">
