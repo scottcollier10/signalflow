@@ -119,10 +119,11 @@ For test execution `15720484-8e33-464b-84b8-0936ecfa7096`:
 
 **Priority Score**:
 ```python
-priority = (impact_score / effort_multiplier) * 100
+priority = impact_score * effort_multiplier * 100  # bounded 0-100
 
 # Impact score: 0-1 (based on time_saved or error_count)
-# Effort multipliers: LOW=1.0, MEDIUM=0.7, HIGH=0.4
+# Effort multipliers are discount factors: LOW=1.0, MEDIUM=0.7, HIGH=0.4
+# (easier fixes rank higher at equal impact)
 ```
 
 **Impact Levels**:
