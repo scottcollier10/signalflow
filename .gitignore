@@ -48,6 +48,8 @@ backend/temp/
 # Dev artifacts
 *.db
 *.sql
+# ...but schema migrations are source, not artifacts
+!supabase/migrations/*.sql
 *.BACKUP
 execution_*.json
 test_execution.json
