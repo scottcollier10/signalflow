@@ -86,37 +86,40 @@ def create_mock_data():
         'path_percentage': 70
     }]
 
-    # Bottleneck data - covering multiple rules
+    # Bottleneck data - covering multiple rules.
+    # Mirrors the real node_stats cache written by BottleneckAnalyzer:
+    # column names are total_duration_ms / is_on_critical_path (renamed by
+    # _load_bottlenecks) and node_type has 'n8n-nodes-base.' stripped.
     node_stats = [
         # Rule 1: Sequential API calls
         {
             'execution_id': execution_id,
             'node_id': 'node1',
             'node_name': 'API Call 1',
-            'node_type': 'n8n-nodes-base.httpRequest',
-            'duration_ms': 3000,
+            'node_type': 'httpRequest',
+            'total_duration_ms': 3000,
             'bottleneck_score': 75,
-            'on_critical_path': True,
+            'is_on_critical_path': True,
             'execution_count': 1
         },
         {
             'execution_id': execution_id,
             'node_id': 'node2',
             'node_name': 'API Call 2',
-            'node_type': 'n8n-nodes-base.httpRequest',
-            'duration_ms': 2500,
+            'node_type': 'httpRequest',
+            'total_duration_ms': 2500,
             'bottleneck_score': 70,
-            'on_critical_path': True,
+            'is_on_critical_path': True,
             'execution_count': 1
         },
         {
             'execution_id': execution_id,
             'node_id': 'node3',
             'node_name': 'API Call 3',
-            'node_type': 'n8n-nodes-base.httpRequest',
-            'duration_ms': 2000,
+            'node_type': 'httpRequest',
+            'total_duration_ms': 2000,
             'bottleneck_score': 65,
-            'on_critical_path': True,
+            'is_on_critical_path': True,
             'execution_count': 1
         },
         # Rule 2: Long duration node
@@ -125,9 +128,9 @@ def create_mock_data():
             'node_id': 'node4',
             'node_name': 'Claude AI Generate',
             'node_type': '@n8n/n8n-nodes-langchain.agent',
-            'duration_ms': 35000,
+            'total_duration_ms': 35000,
             'bottleneck_score': 90,
-            'on_critical_path': True,
+            'is_on_critical_path': True,
             'execution_count': 1
         },
         # Rule 3: High loop iterations
@@ -135,10 +138,10 @@ def create_mock_data():
             'execution_id': execution_id,
             'node_id': 'node5',
             'node_name': 'Loop: Process Items',
-            'node_type': 'n8n-nodes-base.function',
-            'duration_ms': 100,
+            'node_type': 'function',
+            'total_duration_ms': 100,
             'bottleneck_score': 60,
-            'on_critical_path': True,
+            'is_on_critical_path': True,
             'execution_count': 75
         },
         # Rule 7: Hardcoded delay
@@ -146,10 +149,10 @@ def create_mock_data():
             'execution_id': execution_id,
             'node_id': 'node6',
             'node_name': 'Rate Limit Delay',
-            'node_type': 'n8n-nodes-base.wait',
-            'duration_ms': 5000,
+            'node_type': 'wait',
+            'total_duration_ms': 5000,
             'bottleneck_score': 55,
-            'on_critical_path': True,
+            'is_on_critical_path': True,
             'execution_count': 1
         },
     ]
@@ -254,24 +257,33 @@ def create_mock_data():
         },
     ]
 
-    # Error clusters - Rule 15
+    # Error clusters - Rule 15. Real rows store member_count and
+    # affected_nodes as dicts {node_id, node_name, occurrence_count}.
     error_clusters = [
         {
             'id': 'cluster1',
             'execution_id': execution_id,
             'workflow_id': workflow_id,
-            'error_count': 3,
-            'affected_nodes': ['node7'],
+            'member_count': 3,
+            'affected_nodes': [
+                {'node_id': 'node7', 'node_name': 'Fetch Data', 'occurrence_count': 3},
+            ],
             'pattern_type': 'timeout',
+            'label': 'Request timeouts',
             'representative_message': 'Request timeout after 30s'
         },
         {
             'id': 'cluster_systemic',
             'execution_id': execution_id,
             'workflow_id': workflow_id,
-            'error_count': 8,
-            'affected_nodes': ['node12', 'node13', 'node14'],
+            'member_count': 8,
+            'affected_nodes': [
+                {'node_id': 'node12', 'node_name': 'Sync A', 'occurrence_count': 3},
+                {'node_id': 'node13', 'node_name': 'Sync B', 'occurrence_count': 3},
+                {'node_id': 'node14', 'node_name': 'Sync C', 'occurrence_count': 2},
+            ],
             'pattern_type': 'network',
+            'label': 'Network failures',
             'representative_message': 'Network connection failed'
         }
     ]
@@ -279,8 +291,11 @@ def create_mock_data():
     # Execution events
     execution_events = []
 
-    # Workflow nodes
-    workflow_nodes = []
+    # Workflow definition (node metadata comes from workflows.raw_json)
+    workflows = [{
+        'id': workflow_id,
+        'raw_json': {'nodes': []}
+    }]
 
     # Execution metadata
     executions = [{
@@ -296,7 +311,7 @@ def create_mock_data():
         'error_embeddings': error_embeddings,
         'error_clusters': error_clusters,
         'execution_events': execution_events,
-        'workflow_nodes': workflow_nodes,
+        'workflows': workflows,
         'executions': executions
     }
 

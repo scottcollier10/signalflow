@@ -407,9 +407,10 @@ class RecommendationEngine:
         if not self.critical_path or not self.bottlenecks:
             return recommendations
 
-        # Find sequential API nodes on critical path
-        api_node_types = ['n8n-nodes-base.httpRequest', 'n8n-nodes-base.http',
-                          'n8n-nodes-base.webhook', '@n8n/n8n-nodes-langchain.agent']
+        # Find sequential API nodes on critical path. The bottleneck cache
+        # stores types with the 'n8n-nodes-base.' prefix already stripped.
+        api_node_types = ['httpRequest', 'http', 'webhook',
+                          '@n8n/n8n-nodes-langchain.agent']
 
         api_sequences = []
         current_sequence = []
@@ -1339,8 +1340,14 @@ function validateInput(data) {
 
         # Find significant error clusters
         for cluster in self.error_analysis['clusters']:
-            error_count = cluster.get('error_count', 0)
-            affected_nodes = cluster.get('affected_nodes', [])
+            # error_clusters rows store member_count, and affected_nodes is a
+            # list of dicts {node_id, node_name, occurrence_count}.
+            error_count = cluster.get('member_count', 0)
+            affected_nodes = cluster.get('affected_nodes') or []
+            affected_node_ids = [
+                n.get('node_id') if isinstance(n, dict) else n
+                for n in affected_nodes
+            ]
 
             # Trigger: >3 errors across 2+ nodes
             if error_count > 3 and len(affected_nodes) >= 2:
@@ -1373,7 +1380,7 @@ function validateInput(data) {
                     effort=EffortLevel.HIGH,
                     priority_score=0.0,
                     category=RecommendationCategory.RELIABILITY,
-                    affected_node_ids=affected_nodes,
+                    affected_node_ids=affected_node_ids,
                     error_count=error_count
                 ))
 
