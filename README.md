@@ -6,7 +6,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-pgvector-3FCF8E?logo=supabase&logoColor=white)
 ![n8n](https://img.shields.io/badge/n8n-profiler-EA4B71?logo=n8n&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-11_suites-brightgreen)
+![Tests](https://img.shields.io/badge/tests-12_suites-brightgreen)
 
 **An n8n Workflow Profiler — Graph Algorithms, Composite Scoring, and ML Where Each Actually Belongs**
 
@@ -136,9 +136,10 @@ python test_pgvector_search.py
 python test_cluster_persistence.py
 python test_unmapped_nodes.py
 python test_api_errors.py
+python test_comparison_logic.py
 ```
 
-All eleven exit with a real pass/fail code — none of them print a failure and exit 0. The mock-based suites encode the real database schema (column names, stripped node types, cluster shapes), a deliberate guard after a round of bugs where tests passed against mocks that didn't match production. The pgvector suites refuse to run against a non-local database by design.
+All twelve exit with a real pass/fail code — none of them print a failure and exit 0. The mock-based suites encode the real database schema (column names, stripped node types, cluster shapes), a deliberate guard after a round of bugs where tests passed against mocks that didn't match production. The pgvector suites refuse to run against a non-local database by design.
 
 ---
 
@@ -163,7 +164,7 @@ signalflow/
     │   ├── normalizer/    # Execution normalizer
     │   ├── analysis/      # Critical path, bottlenecks, recommendations, error clustering
     │   └── services/      # Database, external APIs
-    ├── test_*.py          # Test suite (11 files, see Testing & Verification)
+    ├── test_*.py          # Test suite (12 files, see Testing & Verification)
     └── requirements.txt
 ```
 
