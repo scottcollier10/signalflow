@@ -29,7 +29,6 @@ class ExecutionSnapshot:
     node_count: int
     bottlenecks_by_severity: Dict[str, int]
     total_bottlenecks: int
-    recommendation_count: int
     critical_path: Dict[str, Any]
     nodes: Dict[str, Dict[str, Any]]  # node_id -> {duration, score, severity}
 
@@ -69,19 +68,36 @@ def get_severity_with_absolute_threshold(score: int, duration_ms: int) -> str:
         return "LOW"
 
 
+# A node-level slowdown below this absolute delta is run-to-run jitter,
+# never a regression. Scaled with execution size: max(250ms, 1% of total).
+NOISE_FLOOR_MS = 250
+
+# A node must still take at least this long to count as a persisting issue.
+PERSISTING_FLOOR_MS = 500
+
+
+def get_noise_floor_ms(total_duration_ms: int) -> float:
+    return max(NOISE_FLOOR_MS, total_duration_ms * 0.01)
+
+
 class ComparisonAnalyzer:
     """Compares two workflow executions to identify optimization impact"""
 
     def __init__(self, supabase_client):
         self.db = supabase_client
 
-    def compare(self, execution_id_a: str, execution_id_b: str) -> Dict[str, Any]:
+    def compare(self, execution_id_a: str, execution_id_b: str,
+                rec_count_a: Optional[int] = None,
+                rec_count_b: Optional[int] = None) -> Dict[str, Any]:
         """
         Compare two executions and return detailed diff.
 
         Args:
             execution_id_a: "Before" execution UUID
             execution_id_b: "After" execution UUID
+            rec_count_a: Recommendation count for the before execution
+                (None = unknown; recommendations are generated, not persisted)
+            rec_count_b: Recommendation count for the after execution
 
         Returns:
             Comparison result with severity distributions, resolved items,
@@ -100,12 +116,15 @@ class ComparisonAnalyzer:
         before_by_severity = self._categorize_by_severity(exec_a.nodes)
         after_by_severity = self._categorize_by_severity(exec_b.nodes)
 
-        # Track resolved, improved, persisting, worsened, and new bottlenecks
+        # Track resolved, improved, persisting, worsened, unchanged, and new bottlenecks
         resolved = []
         improved = []
         persisting = []
         worsened = []
+        unchanged = []
         new_bottlenecks = []
+
+        noise_floor = get_noise_floor_ms(exec_a.duration_ms)
 
         # Find significant bottlenecks in "before" (score >= 50 or duration >= 500ms)
         before_bottleneck_nodes = {
@@ -129,12 +148,15 @@ class ComparisonAnalyzer:
                     "before_score": before_node['score'],
                     "after_score": 0,
                     "improvement_pct": 100.0,
+                    "time_saved_ms": before_node['duration_ms'],
+                    "removed": True,
                     "impact": "Node removed"
                 })
                 continue
 
             before_dur = before_node['duration_ms']
             after_dur = after_node['duration_ms']
+            time_saved = before_dur - after_dur
 
             # Calculate improvement percentage
             improvement_pct = ((before_dur - after_dur) / before_dur * 100) if before_dur > 0 else 0
@@ -142,13 +164,14 @@ class ComparisonAnalyzer:
             # Classification thresholds:
             # - RESOLVED: ≥50% improvement OR now <100ms absolute
             # - IMPROVED: 25-49% improvement
-            # - PERSISTING: <25% improvement (but not worsened)
-            # - WORSENED: >10% slower
+            # - WORSENED: >10% slower AND slower by at least the noise floor
+            # - PERSISTING: still ≥500ms after (a real remaining issue)
+            # - UNCHANGED: everything else (jitter-level movement)
 
             now_fast = after_dur < 100
             is_resolved = improvement_pct >= 50 or now_fast
             is_improved = 25 <= improvement_pct < 50
-            is_worsened = improvement_pct < -10
+            is_worsened = improvement_pct < -10 and (after_dur - before_dur) >= noise_floor
 
             if is_resolved:
                 resolved.append({
@@ -159,6 +182,7 @@ class ComparisonAnalyzer:
                     "before_score": before_node['score'],
                     "after_score": after_node['score'],
                     "improvement_pct": round(improvement_pct, 2),
+                    "time_saved_ms": time_saved,
                     "impact": self._get_improvement_impact(before_node, after_node)
                 })
             elif is_improved:
@@ -170,6 +194,7 @@ class ComparisonAnalyzer:
                     "before_score": before_node['score'],
                     "after_score": after_node['score'],
                     "improvement_pct": round(improvement_pct, 2),
+                    "time_saved_ms": time_saved,
                     "reason": f"Good progress ({improvement_pct:.1f}% faster)"
                 })
             elif is_worsened:
@@ -184,8 +209,7 @@ class ComparisonAnalyzer:
                     "note": "Performance degraded"
                 })
             else:
-                # Persisting: <25% improvement
-                persisting.append({
+                entry = {
                     "node_id": node_id,
                     "node_name": before_node['name'],
                     "before_duration": before_dur,
@@ -193,8 +217,14 @@ class ComparisonAnalyzer:
                     "before_score": before_node['score'],
                     "after_score": after_node['score'],
                     "improvement_pct": round(improvement_pct, 2),
-                    "note": self._get_persisting_note(before_node, after_node)
-                })
+                }
+                if after_dur >= PERSISTING_FLOOR_MS:
+                    # Persisting: still slow enough to be a real issue
+                    entry["note"] = self._get_persisting_note(before_node, after_node)
+                    persisting.append(entry)
+                else:
+                    entry["note"] = "Within run-to-run variance"
+                    unchanged.append(entry)
 
         # Check for new bottlenecks (regressions)
         after_bottleneck_nodes = {
@@ -234,11 +264,12 @@ class ComparisonAnalyzer:
             overall_pct_improvement=pct_improvement
         )
 
-        # Build top improvements (combine resolved + improved, sorted by improvement percentage)
+        # Build top improvements (combine resolved + improved, sorted by
+        # absolute time saved — percentage ties every removed node at 100%)
         all_improvements = resolved + improved
         top_improvements = sorted(
             all_improvements,
-            key=lambda x: x.get('improvement_pct', 0),
+            key=lambda x: x.get('time_saved_ms', 0),
             reverse=True
         )[:5]
 
@@ -258,7 +289,7 @@ class ComparisonAnalyzer:
                     "low": before_by_severity["LOW"],
                     "total": exec_a.total_bottlenecks
                 },
-                "recommendations": exec_a.recommendation_count,
+                "recommendations": rec_count_a,
                 "critical_path": exec_a.critical_path
             },
             "after": {
@@ -275,7 +306,7 @@ class ComparisonAnalyzer:
                     "low": after_by_severity["LOW"],
                     "total": exec_b.total_bottlenecks
                 },
-                "recommendations": exec_b.recommendation_count,
+                "recommendations": rec_count_b,
                 "critical_path": exec_b.critical_path
             },
             "delta": {
@@ -300,6 +331,10 @@ class ComparisonAnalyzer:
             "persisting": {
                 "count": len(persisting),
                 "items": persisting
+            },
+            "unchanged": {
+                "count": len(unchanged),
+                "items": unchanged
             },
             "worsened": {
                 "count": len(worsened),
@@ -399,16 +434,6 @@ class ComparisonAnalyzer:
                     "coverage": round(len(path_nodes) / len(nodes) * 100, 1) if nodes else 0
                 }
 
-            # Count recommendations (if cached)
-            rec_count = 0
-            try:
-                rec_response = self.db.table('recommendations').select(
-                    'id'
-                ).eq('execution_id', execution_id).execute()
-                rec_count = len(rec_response.data) if rec_response.data else 0
-            except Exception:
-                pass  # Recommendations table may not exist
-
             timestamp = exec_data.get('started_at', '')
             if timestamp:
                 try:
@@ -426,7 +451,6 @@ class ComparisonAnalyzer:
                 node_count=len(nodes),
                 bottlenecks_by_severity=severity_counts,
                 total_bottlenecks=total_bottlenecks,
-                recommendation_count=rec_count,
                 critical_path=critical_path,
                 nodes=nodes
             )
@@ -540,6 +564,17 @@ class ComparisonAnalyzer:
             return {
                 "status": "regression",
                 "message": f"Regression: {new_count} new bottleneck(s) introduced"
+            }
+
+        # Big clean win: majority of runtime eliminated with no material
+        # regressions and nothing severe left.
+        if overall_pct_improvement >= 50 and worsened_count == 0 and after["SEVERE"] == 0:
+            return {
+                "status": "excellent",
+                "message": (
+                    f"{overall_pct_improvement:.1f}% faster overall — "
+                    f"{resolved_count} bottleneck(s) resolved"
+                )
             }
 
         # All critical resolved
