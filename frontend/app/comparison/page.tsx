@@ -34,7 +34,7 @@ interface ExecutionSnapshot {
   status: string;
   node_count: number;
   bottlenecks: BottleneckCounts;
-  recommendations: number;
+  recommendations: number | null;
   critical_path: CriticalPath;
 }
 
@@ -46,8 +46,11 @@ interface ImprovementItem {
   before_score: number;
   after_score: number;
   improvement_pct: number;
+  time_saved_ms?: number;
+  removed?: boolean;
   impact?: string;
   reason?: string;
+  note?: string;
 }
 
 interface ComparisonDelta {
@@ -70,6 +73,7 @@ interface ComparisonData {
   resolved: { count: number; items: ImprovementItem[] };
   improved: { count: number; items: ImprovementItem[] };
   persisting: { count: number; items: ImprovementItem[] };
+  unchanged: { count: number; items: ImprovementItem[] };
   worsened: { count: number; items: ImprovementItem[] };
   new: { count: number; items: ImprovementItem[] };
   top_improvements: ImprovementItem[];
@@ -295,7 +299,7 @@ function ComparisonContent() {
     );
   }
 
-  const { before, after, delta, top_improvements, resolved, improved, persisting, worsened } = data;
+  const { before, after, delta, resolved, improved, persisting, unchanged, worsened } = data;
   const verdictStyle = getVerdictStyle(delta.verdict);
 
   // Calculate bar widths (before is 100%, after is proportional)
@@ -303,12 +307,15 @@ function ComparisonContent() {
     ? Math.max((after.duration / before.duration) * 100, 5)
     : 100;
 
-  // Combine resolved + improved for "Top Improvements" section
+  // Combine resolved + improved, ranked by absolute time saved —
+  // percentage ties every removed node at 100% and buries the real wins
+  const savedMs = (i: ImprovementItem) =>
+    i.time_saved_ms ?? (i.before_duration - i.after_duration);
   const allImprovements = [...(resolved?.items || []), ...(improved?.items || [])].sort(
-    (a, b) => (b.improvement_pct || 0) - (a.improvement_pct || 0)
+    (a, b) => savedMs(b) - savedMs(a)
   );
-  const topImprovements = allImprovements.slice(0, 5);
-  const minorImprovements = allImprovements.slice(5);
+  const topImprovements = allImprovements.filter((i) => savedMs(i) >= 500).slice(0, 5);
+  const minorImprovements = allImprovements.filter((i) => !topImprovements.includes(i));
 
   // Get display IDs (prefer n8n_execution_id over truncated UUID)
   const beforeDisplayId = before.n8n_execution_id || before.execution_id.slice(-4);
@@ -396,8 +403,8 @@ function ComparisonContent() {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-xs uppercase tracking-wide text-neu-text-muted">Bottlenecks</span>
-              <span className="text-neu-coral font-bold flex items-center gap-2">
-                <span>🔴</span>
+              <span className={`${before.bottlenecks.total > 0 ? 'text-neu-coral' : 'text-neu-green'} font-bold flex items-center gap-2`}>
+                <span>{before.bottlenecks.total > 0 ? '🔴' : '✅'}</span>
                 {before.bottlenecks.total}
                 {before.bottlenecks.severe > 0 && (
                   <span className="text-xs font-normal text-neu-text-muted">
@@ -406,15 +413,17 @@ function ComparisonContent() {
                 )}
               </span>
             </div>
+            {before.recommendations !== null && (
+              <div className="flex justify-between items-center">
+                <span className="text-xs uppercase tracking-wide text-neu-text-muted">Recommendations</span>
+                <span className={`${before.recommendations > 0 ? 'text-neu-orange' : 'text-neu-green'} font-bold flex items-center gap-2`}>
+                  <span>{before.recommendations > 0 ? '⚠️' : '✅'}</span>
+                  {before.recommendations}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between items-center">
-              <span className="text-xs uppercase tracking-wide text-neu-text-muted">Recommendations</span>
-              <span className="text-neu-orange font-bold flex items-center gap-2">
-                <span>⚠️</span>
-                {before.recommendations}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-xs uppercase tracking-wide text-neu-text-muted">Nodes</span>
+              <span className="text-xs uppercase tracking-wide text-neu-text-muted">Nodes Executed</span>
               <span className="text-neu-text font-medium">{before.node_count}</span>
             </div>
           </div>
@@ -435,24 +444,26 @@ function ComparisonContent() {
             <p className="text-xs uppercase tracking-wide text-neu-text-muted mt-2">Total Duration</p>
           </div>
 
-          {/* Metrics with Icons */}
+          {/* Metrics with Icons — green only when actually better than before */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-xs uppercase tracking-wide text-neu-text-muted">Bottlenecks</span>
-              <span className="text-neu-green font-bold flex items-center gap-2">
-                <span>✅</span>
+              <span className={`${after.bottlenecks.total < before.bottlenecks.total || after.bottlenecks.total === 0 ? 'text-neu-green' : 'text-neu-orange'} font-bold flex items-center gap-2`}>
+                {(after.bottlenecks.total < before.bottlenecks.total || after.bottlenecks.total === 0) && <span>✅</span>}
                 {after.bottlenecks.total}
               </span>
             </div>
+            {after.recommendations !== null && (
+              <div className="flex justify-between items-center">
+                <span className="text-xs uppercase tracking-wide text-neu-text-muted">Recommendations</span>
+                <span className={`${before.recommendations === null || after.recommendations < before.recommendations || after.recommendations === 0 ? 'text-neu-green' : 'text-neu-orange'} font-bold flex items-center gap-2`}>
+                  {(before.recommendations === null || after.recommendations < before.recommendations || after.recommendations === 0) && <span>✅</span>}
+                  {after.recommendations}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between items-center">
-              <span className="text-xs uppercase tracking-wide text-neu-text-muted">Recommendations</span>
-              <span className="text-neu-green font-bold flex items-center gap-2">
-                <span>✅</span>
-                {after.recommendations}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-xs uppercase tracking-wide text-neu-text-muted">Nodes</span>
+              <span className="text-xs uppercase tracking-wide text-neu-text-muted">Nodes Executed</span>
               <span className="text-neu-text font-medium">{after.node_count}</span>
             </div>
           </div>
@@ -467,17 +478,16 @@ function ComparisonContent() {
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-8 flex-wrap">
             <div>
-              <p className={`text-6xl font-display font-bold ${verdictStyle.text} flex items-center gap-2`}>
-                {delta.pct_improvement >= 0 ? '⬇️' : '⬆️'}
+              <p className={`text-6xl font-display font-bold ${delta.pct_improvement >= 0 ? 'text-neu-green' : 'text-neu-coral'}`}>
                 {formatPct(delta.pct_improvement)}
               </p>
               <p className="text-xs uppercase tracking-wide text-neu-text-muted mt-2">
-                {delta.pct_improvement >= 0 ? 'Improvement' : 'Regression'}
+                {delta.pct_improvement >= 0 ? 'Faster' : 'Slower'}
               </p>
             </div>
             <div className="h-16 w-px bg-neu-text-muted/20 hidden sm:block" />
             <div>
-              <p className={`text-3xl font-display font-bold ${verdictStyle.text} flex items-center gap-2`}>
+              <p className="text-3xl font-display font-bold text-neu-text flex items-center gap-2">
                 <span>⏱️</span>
                 {delta.duration_saved >= 0 ? '' : '+'}{formatDuration(Math.abs(delta.duration_saved))}
               </p>
@@ -487,7 +497,7 @@ function ComparisonContent() {
             </div>
             <div className="h-16 w-px bg-neu-text-muted/20 hidden sm:block" />
             <div>
-              <p className={`text-3xl font-display font-bold ${verdictStyle.text} flex items-center gap-2`}>
+              <p className="text-3xl font-display font-bold text-neu-text flex items-center gap-2">
                 <span>✅</span>
                 {delta.bottlenecks_resolved}
               </p>
@@ -497,7 +507,7 @@ function ComparisonContent() {
               <>
                 <div className="h-16 w-px bg-neu-text-muted/20 hidden sm:block" />
                 <div>
-                  <p className={`text-3xl font-display font-bold ${verdictStyle.text} flex items-center gap-2`}>
+                  <p className="text-3xl font-display font-bold text-neu-text flex items-center gap-2">
                     <span>📈</span>
                     {delta.bottlenecks_improved}
                   </p>
@@ -538,8 +548,10 @@ function ComparisonContent() {
                   >
                     <div className="flex items-center justify-between mb-3">
                       <span className="font-mono text-neu-text">{node.node_name}</span>
-                      <span className="text-neu-green font-bold text-lg flex items-center gap-1">
-                        ⬇️ {formatPct(node.improvement_pct)}
+                      <span className="text-neu-green font-bold text-lg">
+                        {node.removed
+                          ? `Removed — reclaimed ${formatDuration(savedMs(node))}`
+                          : `${formatDuration(savedMs(node))} saved (${formatPct(node.improvement_pct)})`}
                       </span>
                     </div>
                     <div className="flex items-center gap-4 text-sm flex-wrap">
@@ -553,8 +565,14 @@ function ComparisonContent() {
                       <span className="text-neu-text-muted">→</span>
                       <div className="flex items-center gap-2">
                         <span className="text-xs uppercase tracking-wide text-neu-text-muted">After</span>
-                        <span className="text-neu-green font-semibold">{formatDuration(node.after_duration)}</span>
-                        <span className="text-xs text-neu-green">✅</span>
+                        {node.removed ? (
+                          <span className="text-neu-text-muted font-semibold">—</span>
+                        ) : (
+                          <>
+                            <span className="text-neu-green font-semibold">{formatDuration(node.after_duration)}</span>
+                            <span className="text-xs text-neu-green">✅</span>
+                          </>
+                        )}
                       </div>
                     </div>
                     {node.impact && (
@@ -595,8 +613,12 @@ function ComparisonContent() {
                     <div className="flex items-center gap-3 text-sm">
                       <span className="text-neu-coral">{formatDuration(node.before_duration)}</span>
                       <span className="text-neu-text-muted">→</span>
-                      <span className="text-neu-green">{formatDuration(node.after_duration)}</span>
-                      <span className="text-neu-green font-semibold">-{formatPct(node.improvement_pct)}</span>
+                      {node.removed ? (
+                        <span className="text-neu-text-muted">Removed</span>
+                      ) : (
+                        <span className="text-neu-green">{formatDuration(node.after_duration)}</span>
+                      )}
+                      <span className="text-neu-green font-semibold">{formatDuration(savedMs(node))} saved</span>
                     </div>
                   </div>
                 ))}
@@ -632,6 +654,44 @@ function ComparisonContent() {
                       <span className="text-neu-text-muted">{formatDuration(node.before_duration)}</span>
                       <span className="text-neu-text-muted">→</span>
                       <span className="text-neu-orange">{formatDuration(node.after_duration)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Unchanged - jitter-level movement, not issues */}
+        {unchanged && unchanged.count > 0 && (
+          <div className="neu-flat overflow-hidden">
+            <button
+              onClick={() => toggleSection('unchanged')}
+              className="w-full p-4 flex items-center justify-between text-left hover:bg-neu-accent/5 transition-colors"
+            >
+              <span className="font-display font-semibold text-neu-text-muted flex items-center gap-2">
+                <span>➖</span>
+                Unchanged ({unchanged.count})
+                <span className="text-xs font-normal text-neu-text-muted ml-2">
+                  — within run-to-run variance
+                </span>
+              </span>
+              <span className="text-neu-text-muted text-xl">
+                {expandedSections.includes('unchanged') ? '−' : '+'}
+              </span>
+            </button>
+            {expandedSections.includes('unchanged') && (
+              <div className="px-4 pb-4 space-y-2">
+                {unchanged.items.map((node) => (
+                  <div
+                    key={node.node_id}
+                    className="p-3 rounded-lg bg-neu-bg border border-neu-text-muted/10 flex items-center justify-between"
+                  >
+                    <span className="font-mono text-sm text-neu-text-muted">{node.node_name}</span>
+                    <div className="flex items-center gap-3 text-sm text-neu-text-muted">
+                      <span>{formatDuration(node.before_duration)}</span>
+                      <span>→</span>
+                      <span>{formatDuration(node.after_duration)}</span>
                     </div>
                   </div>
                 ))}
