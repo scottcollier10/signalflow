@@ -1233,8 +1233,27 @@ async def compare_executions(exec_a: str, exec_b: str):
     try:
         supabase = create_client(settings.supabase_url, settings.supabase_key)
 
+        async def _rec_count(execution_id: str):
+            """Recommendations are generated, never persisted — compute live.
+            Returns None on failure so the UI hides the stat instead of lying with 0."""
+            try:
+                row = supabase.table('executions').select('workflow_id').eq(
+                    'id', execution_id).execute()
+                if not row.data:
+                    return None
+                engine = RecommendationEngine(supabase)
+                result = await engine.generate_recommendations(
+                    execution_id, row.data[0]['workflow_id'])
+                return len(result.get('data', {}).get('recommendations', []))
+            except Exception:
+                logger.exception("Failed to count recommendations for %s", execution_id)
+                return None
+
+        rec_a = await _rec_count(exec_a)
+        rec_b = await _rec_count(exec_b)
+
         analyzer = ComparisonAnalyzer(supabase)
-        comparison = analyzer.compare(exec_a, exec_b)
+        comparison = analyzer.compare(exec_a, exec_b, rec_count_a=rec_a, rec_count_b=rec_b)
 
         return {
             "success": True,
