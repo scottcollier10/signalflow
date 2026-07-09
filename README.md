@@ -281,7 +281,7 @@ SignalFlow is currently in private development. Contributions will be opened aft
 
 ## License
 
-TBD (Likely MIT or commercial)
+MIT — see [LICENSE](./LICENSE)
 
 ---
 
