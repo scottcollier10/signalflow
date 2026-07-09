@@ -269,8 +269,6 @@ class BottleneckAnalyzer:
         # Group by normalized node_id and aggregate
         from collections import defaultdict
         node_data_by_normalized = defaultdict(lambda: {
-            'name': '',
-            'type': '',
             'durations': [],
             'execution_count': 0
         })
@@ -278,11 +276,6 @@ class BottleneckAnalyzer:
         for event in events_response.data:
             normalized_node_id = event['node_id']
             duration = event.get('duration_ms', 0)
-
-            # Get node name and type from first occurrence
-            if not node_data_by_normalized[normalized_node_id]['name']:
-                node_data_by_normalized[normalized_node_id]['name'] = event.get('node_name', normalized_node_id)
-                node_data_by_normalized[normalized_node_id]['type'] = event.get('node_type', 'unknown')
 
             node_data_by_normalized[normalized_node_id]['durations'].append(duration)
             node_data_by_normalized[normalized_node_id]['execution_count'] += 1
@@ -294,9 +287,13 @@ class BottleneckAnalyzer:
             # Map normalized name to UUID
             uuid = name_to_uuid.get(normalized_id)
             if uuid:
+                # Take name/type from the workflow graph: execution_events
+                # rows carry no node metadata, so event-derived values are
+                # always 'unknown' / normalized lowercase ids.
+                graph_node = workflow_graph['nodes'][uuid]
                 result[uuid] = {
-                    'name': data['name'],
-                    'type': data['type'],
+                    'name': graph_node['name'],
+                    'type': graph_node['type'],
                     'duration_ms': sum(data['durations']),  # Total duration
                     'execution_count': data['execution_count'],
                     'durations': data['durations']
@@ -499,7 +496,8 @@ class BottleneckAnalyzer:
                     'node_type': bottleneck.node_type,
                     'bottleneck_score': bottleneck.score,
                     'total_duration_ms': bottleneck.duration_ms,
-                    'is_on_critical_path': bottleneck.on_critical_path
+                    'is_on_critical_path': bottleneck.on_critical_path,
+                    'execution_count': bottleneck.execution_count
                 })
 
             # Batch insert all records
