@@ -347,35 +347,48 @@ class RecommendationEngine:
             return {'clusters': [], 'errors': []}
 
     async def _load_execution_data(self, execution_id: str, workflow_id: str) -> Dict:
-        """Load execution events and workflow structure"""
+        """Load execution events and workflow structure.
+
+        Each query is independent so one failure does not zero out the rest
+        (a shared try/except previously turned any single error into
+        execution=None, disabling every rule that needs duration or events).
+        """
+        events = []
         try:
-            # Load execution events
             events_response = self.db.table('execution_events') \
                 .select('*') \
                 .eq('execution_id', execution_id) \
                 .order('timestamp') \
                 .execute()
+            events = events_response.data if events_response.data else []
+        except Exception as e:
+            print(f"Error loading execution events: {e}")
 
-            # Load workflow nodes
-            nodes_response = self.db.table('workflow_nodes') \
-                .select('*') \
-                .eq('workflow_id', workflow_id) \
+        # Node metadata lives in workflows.raw_json (there is no
+        # workflow_nodes table in any environment).
+        nodes = []
+        try:
+            workflow_response = self.db.table('workflows') \
+                .select('raw_json') \
+                .eq('id', workflow_id) \
                 .execute()
+            if workflow_response.data:
+                raw_json = workflow_response.data[0].get('raw_json') or {}
+                nodes = raw_json.get('nodes', [])
+        except Exception as e:
+            print(f"Error loading workflow nodes: {e}")
 
-            # Load execution metadata
+        execution = None
+        try:
             execution_response = self.db.table('executions') \
                 .select('*') \
                 .eq('id', execution_id) \
                 .execute()
-
-            return {
-                'events': events_response.data if events_response.data else [],
-                'nodes': nodes_response.data if nodes_response.data else [],
-                'execution': execution_response.data[0] if execution_response.data else None
-            }
+            execution = execution_response.data[0] if execution_response.data else None
         except Exception as e:
-            print(f"Error loading execution data: {e}")
-            return {'events': [], 'nodes': [], 'execution': None}
+            print(f"Error loading execution metadata: {e}")
+
+        return {'events': events, 'nodes': nodes, 'execution': execution}
 
     # =========================================================================
     # PERFORMANCE RULES (1-7)
