@@ -2,7 +2,7 @@
 
 The story in one line: SignalFlow profiled a 43s content pipeline, we applied its
 recommendations, and the same workflow now runs in 13s with recommendations down
-from 31 to 9.
+from 32 to 9.
 
 ## Proven result (Content Pipeline, 2026-07-08)
 
@@ -11,7 +11,7 @@ from 31 to 9.
 | n8n execution | 13781/13782/13784 | 13793 |
 | Duration | ~43s | 13.1s |
 | Nodes | 28 | 21 |
-| Recommendations | 31 | 9 |
+| Recommendations | 32 | 9 |
 | Rules firing | 1, 2, 5, 6, 7, 17, 18, 31, 37, 38, 39 | 1, 17, 38, 39 |
 
 What was applied, straight from the recommendation list:
@@ -33,14 +33,17 @@ path stays flagged until you cache it. That is correct behavior, not noise.
 
 ## Demo script (5 minutes)
 
-1. Dashboard: show the workflow group. Baseline executions all ~43s with 31
+1. Dashboard: show the workflow group. Baseline executions all ~43s with 32
    recommendations each. Point out determinism: same workflow, same findings,
    every run.
 2. Open baseline analysis: Critical Path tab (Legacy Export API dominates),
    then Recommendations tab. Call out the top 4 by priority.
 3. "We applied exactly these." Open the optimized execution: 13.1s, 9
    recommendations, zero CRITICAL.
-4. Hit **Compare Versions** on the workflow card for the before/after.
+4. Hit **Compare Versions** on the workflow card. The report renders the
+   verdict itself: 70.1% faster, 10 bottlenecks resolved, wins ranked by
+   absolute time reclaimed, and jitter-level changes parked in an Unchanged
+   bucket instead of flagged as regressions.
 5. Close on the floor: the 9 that remain are hygiene plus one honest flag on
    the LLM call. A profiler that goes to zero is lying to you.
 
