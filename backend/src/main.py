@@ -10,7 +10,9 @@ from src.analysis.bottlenecks import BottleneckAnalyzer
 from src.analysis.error_clustering import ErrorClusteringAnalyzer
 from src.analysis.recommendations import RecommendationEngine
 from src.analysis.comparison import ComparisonAnalyzer
-from supabase import create_client
+# HTTP/1.1 client factory — the stock HTTP/2 session corrupts under the
+# threaded fan-outs in the analysis endpoints (see src/db.py).
+from src.db import create_http1_supabase_client as create_client
 from datetime import datetime
 import asyncio
 import json
