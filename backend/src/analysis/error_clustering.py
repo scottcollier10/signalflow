@@ -522,7 +522,7 @@ class ErrorClusteringAnalyzer:
             clusters.append(cluster)
 
         # Store clusters in database (failures are surfaced, not fatal)
-        persistence_warnings = await self._store_clusters(clusters)
+        persistence_warnings = await self._store_clusters(clusters, workflow_id)
 
         return clusters, persistence_warnings
 
@@ -698,16 +698,39 @@ class ErrorClusteringAnalyzer:
         base_label = pattern_labels.get(pattern_type, 'Error Pattern')
         return f"{base_label} ({member_count} occurrences)"
 
-    async def _store_clusters(self, clusters: List[ErrorCluster]) -> List[str]:
+    async def _store_clusters(
+        self,
+        clusters: List[ErrorCluster],
+        workflow_id: str
+    ) -> List[str]:
         """
-        Store clusters in database.
+        Replace the workflow's stored clusters with the freshly computed set.
+
+        Clusters get new UUIDs on every analysis run, so insert-only storage
+        accumulated stale copies forever — and rule 15 of the recommendation
+        engine reads ALL of a workflow's clusters, inflating recommendation
+        counts. Delete-then-insert (same pattern as node_stats in the
+        bottleneck analyzer) keeps exactly one current set per workflow.
 
         Returns:
-            Warning strings for clusters that failed to persist (empty on
+            Warning strings for steps that failed to persist (empty on
             full success). Failures are logged and surfaced to the caller;
             they do not abort the analysis.
         """
         warnings = []
+
+        try:
+            self.db.table('error_clusters').delete().eq(
+                'workflow_id', workflow_id
+            ).execute()
+        except Exception as e:
+            warning = (
+                f"Failed to clear stale clusters for workflow "
+                f"{workflow_id}: {e}"
+            )
+            logger.warning(warning)
+            warnings.append(warning)
+
         for cluster in clusters:
             try:
                 self.db.table('error_clusters').insert({
