@@ -8,6 +8,7 @@ Week 3 Day 3: Error Clustering & Pattern Detection
 """
 
 import ast
+import asyncio
 import logging
 from dataclasses import dataclass, asdict
 from datetime import datetime
@@ -17,7 +18,7 @@ from sklearn.cluster import DBSCAN
 from sklearn.metrics.pairwise import cosine_distances, cosine_similarity
 import uuid
 
-from .embeddings import ErrorEmbedder, ErrorEvent, clean_error_message
+from .embeddings import ErrorEmbedder, ErrorEvent, clean_error_message, get_shared_embedder
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +128,16 @@ class ErrorClusteringAnalyzer:
             supabase_client: Initialized Supabase client for database operations
         """
         self.db = supabase_client
-        self.embedder = ErrorEmbedder()
+
+    @property
+    def embedder(self) -> ErrorEmbedder:
+        """Process-wide embedder, loaded lazily on first use.
+
+        Loading the model costs ~1.4s; zero-error analyses (the common
+        happy path) never touch it, and analyzers across requests share
+        one instance.
+        """
+        return get_shared_embedder()
 
     async def analyze_execution(
         self,
@@ -308,20 +318,40 @@ class ErrorClusteringAnalyzer:
         if not errors:
             return []
 
-        # Generate embeddings in batch for efficiency
-        embeddings = self.embedder.generate_embeddings_batch(errors)
+        # Reuse embeddings already stored for this execution. Re-analyses
+        # (every page load hits this endpoint) must not insert duplicate
+        # rows: duplicates inflate the historical clustering set, corrupt
+        # summary counts, and make the endpoint slower on every run.
+        existing_response = self.db.table('error_embeddings').select(
+            'id, event_id'
+        ).eq('execution_id', execution_id).in_(
+            'event_id', [error.event_id for error in errors]
+        ).execute()
 
-        # Store each embedding
-        embedding_ids = []
-        for error, embedding in zip(errors, embeddings):
-            embedding_id = await self._store_embedding(
-                error=error,
-                embedding=embedding,
-                execution_id=execution_id
-            )
-            embedding_ids.append(embedding_id)
+        existing_by_event: Dict[str, str] = {}
+        for row in (existing_response.data or []):
+            # setdefault: if pre-fix pollution left multiple copies,
+            # consistently reuse the first stored row.
+            existing_by_event.setdefault(row['event_id'], row['id'])
 
-        return embedding_ids
+        new_errors = [e for e in errors if e.event_id not in existing_by_event]
+
+        # Only new errors are embedded — a full re-analysis never touches
+        # the embedding model at all.
+        new_ids_by_event: Dict[str, str] = {}
+        if new_errors:
+            embeddings = self.embedder.generate_embeddings_batch(new_errors)
+            for error, embedding in zip(new_errors, embeddings):
+                new_ids_by_event[error.event_id] = await self._store_embedding(
+                    error=error,
+                    embedding=embedding,
+                    execution_id=execution_id
+                )
+
+        return [
+            existing_by_event.get(error.event_id, new_ids_by_event.get(error.event_id))
+            for error in errors
+        ]
 
     async def _store_embedding(
         self,
@@ -386,6 +416,20 @@ class ErrorClusteringAnalyzer:
             Embedding records (ascending distance), each with a parsed
             numpy `embedding` and its `distance` from the query
         """
+        # The RPC is blocking; run it in a thread so multiple lookups
+        # can be awaited concurrently (see _gather_neighbors).
+        return await asyncio.to_thread(
+            self._find_similar_errors_sync,
+            query_embedding, workflow_id, match_count, max_distance
+        )
+
+    def _find_similar_errors_sync(
+        self,
+        query_embedding: np.ndarray,
+        workflow_id: str,
+        match_count: int,
+        max_distance: float
+    ) -> List[Dict[str, Any]]:
         embedding_list = [float(x) for x in np.asarray(query_embedding).tolist()]
 
         response = self.db.rpc('match_error_embeddings', {
@@ -400,6 +444,31 @@ class ErrorClusteringAnalyzer:
             record['embedding'] = self._parse_embedding(record['embedding'])
 
         return results
+
+    async def _gather_neighbors(
+        self,
+        current: List[Dict[str, Any]],
+        workflow_id: str,
+        execution_window: int,
+        max_distance: float
+    ) -> List[List[Dict[str, Any]]]:
+        """
+        Fetch each current error's historical neighbors concurrently.
+
+        Sequential lookups meant one blocking round trip per error (36
+        errors ≈ 6.5s against hosted Supabase); the network waits dominate,
+        so fanning them out across threads collapses the wall time to
+        roughly one round trip. Returns neighbor lists in input order.
+        """
+        return await asyncio.gather(*(
+            self.find_similar_errors(
+                query_embedding=row['embedding'],
+                workflow_id=workflow_id,
+                match_count=execution_window,
+                max_distance=max_distance
+            )
+            for row in current
+        ))
 
     async def _cluster_errors(
         self,
@@ -431,15 +500,17 @@ class ErrorClusteringAnalyzer:
             return [], []
 
         # Retrieve similar historical errors for each current error
+        # (lookups run concurrently; merge order matches the sequential
+        # original: current errors first, then each error's neighbors)
         max_distance = 1 - similarity_threshold
         candidates = {row['id']: row for row in current}
-        for row in current:
-            neighbors = await self.find_similar_errors(
-                query_embedding=row['embedding'],
-                workflow_id=workflow_id,
-                match_count=execution_window,
-                max_distance=max_distance
-            )
+        neighbor_lists = await self._gather_neighbors(
+            current=current,
+            workflow_id=workflow_id,
+            execution_window=execution_window,
+            max_distance=max_distance
+        )
+        for neighbors in neighbor_lists:
             for neighbor in neighbors:
                 candidates.setdefault(neighbor['id'], neighbor)
 
@@ -493,7 +564,7 @@ class ErrorClusteringAnalyzer:
             clusters.append(cluster)
 
         # Store clusters in database (failures are surfaced, not fatal)
-        persistence_warnings = await self._store_clusters(clusters)
+        persistence_warnings = await self._store_clusters(clusters, workflow_id)
 
         return clusters, persistence_warnings
 
@@ -669,46 +740,89 @@ class ErrorClusteringAnalyzer:
         base_label = pattern_labels.get(pattern_type, 'Error Pattern')
         return f"{base_label} ({member_count} occurrences)"
 
-    async def _store_clusters(self, clusters: List[ErrorCluster]) -> List[str]:
+    async def _store_clusters(
+        self,
+        clusters: List[ErrorCluster],
+        workflow_id: str
+    ) -> List[str]:
         """
-        Store clusters in database.
+        Replace the workflow's stored clusters with the freshly computed set.
+
+        Clusters get new UUIDs on every analysis run, so insert-only storage
+        accumulated stale copies forever — and rule 15 of the recommendation
+        engine reads ALL of a workflow's clusters, inflating recommendation
+        counts. Delete-then-insert (same pattern as node_stats in the
+        bottleneck analyzer) keeps exactly one current set per workflow.
 
         Returns:
-            Warning strings for clusters that failed to persist (empty on
+            Warning strings for steps that failed to persist (empty on
             full success). Failures are logged and surfaced to the caller;
             they do not abort the analysis.
         """
         warnings = []
-        for cluster in clusters:
-            try:
-                self.db.table('error_clusters').insert({
-                    'id': cluster.id,
-                    'workflow_id': cluster.workflow_id,
-                    'label': cluster.label,
-                    'representative_error_id': cluster.representative_error_id,
-                    'representative_message': cluster.representative_message,
-                    'member_count': cluster.member_count,
-                    'avg_similarity': cluster.avg_similarity,
-                    'affected_nodes': cluster.affected_nodes,
-                    'pattern_type': cluster.pattern_type,
-                    'severity': cluster.severity
-                }).execute()
 
-                # Update error_embeddings with cluster assignment
-                for node in cluster.affected_nodes:
-                    self.db.table('error_embeddings').update({
-                        'cluster_id': cluster.id,
-                        'cluster_label': cluster.label
-                    }).eq('node_id', node['node_id']).eq(
-                        'error_message', cluster.representative_message
-                    ).execute()
+        # The clear must fully complete before any insert starts — a delete
+        # racing the inserts could wipe rows this same run just wrote.
+        try:
+            await asyncio.to_thread(
+                lambda: self.db.table('error_clusters').delete().eq(
+                    'workflow_id', workflow_id
+                ).execute()
+            )
+        except Exception as e:
+            warning = (
+                f"Failed to clear stale clusters for workflow "
+                f"{workflow_id}: {e}"
+            )
+            logger.warning(warning)
+            warnings.append(warning)
 
-            except Exception as e:
-                warning = f"Failed to store cluster {cluster.id} ({cluster.label}): {e}"
-                logger.warning(warning)
-                warnings.append(warning)
+        if clusters:
+            # Each cluster's writes (insert + node updates) are independent
+            # of other clusters', so run them concurrently — sequentially
+            # this was ~20 blocking round trips (~2s against hosted Supabase).
+            results = await asyncio.gather(*(
+                asyncio.to_thread(self._store_cluster_sync, cluster)
+                for cluster in clusters
+            ))
+            warnings.extend(w for w in results if w is not None)
 
         return warnings
+
+    def _store_cluster_sync(self, cluster: ErrorCluster) -> Optional[str]:
+        """Persist one cluster and its embedding assignments.
+
+        Returns a warning string on failure, None on success.
+        """
+        try:
+            self.db.table('error_clusters').insert({
+                'id': cluster.id,
+                'workflow_id': cluster.workflow_id,
+                'label': cluster.label,
+                'representative_error_id': cluster.representative_error_id,
+                'representative_message': cluster.representative_message,
+                'member_count': cluster.member_count,
+                'avg_similarity': cluster.avg_similarity,
+                'affected_nodes': cluster.affected_nodes,
+                'pattern_type': cluster.pattern_type,
+                'severity': cluster.severity
+            }).execute()
+
+            # Update error_embeddings with cluster assignment
+            for node in cluster.affected_nodes:
+                self.db.table('error_embeddings').update({
+                    'cluster_id': cluster.id,
+                    'cluster_label': cluster.label
+                }).eq('node_id', node['node_id']).eq(
+                    'error_message', cluster.representative_message
+                ).execute()
+
+            return None
+
+        except Exception as e:
+            warning = f"Failed to store cluster {cluster.id} ({cluster.label}): {e}"
+            logger.warning(warning)
+            return warning
 
     # =============================================================================
     # Phase 5: Result Building
