@@ -14,6 +14,8 @@ Run: python test_cluster_replacement.py
 
 import asyncio
 import sys
+import threading
+import time
 import uuid
 
 sys.path.insert(0, ".")
@@ -51,6 +53,20 @@ class FakeQuery:
         return self
 
     def execute(self):
+        # Track write concurrency (writes may run on worker threads)
+        with self.db.lock:
+            self.db.in_flight += 1
+            self.db.max_concurrent = max(self.db.max_concurrent, self.db.in_flight)
+        try:
+            if self.db.write_delay:
+                time.sleep(self.db.write_delay)
+            with self.db.lock:
+                return self._execute_locked()
+        finally:
+            with self.db.lock:
+                self.db.in_flight -= 1
+
+    def _execute_locked(self):
         rows = self.db.tables.setdefault(self.table_name, [])
         if self._is_delete:
             if self.db.fail_deletes and self.table_name == "error_clusters":
@@ -61,6 +77,7 @@ class FakeQuery:
             ]
             self.db.tables[self.table_name] = kept
             self.db.deletes.append((self.table_name, list(self.filters)))
+            self.db.ops.append(("delete", self.table_name))
             return type("R", (), {"data": []})()
         if self._insert_payload is not None:
             if (self.db.fail_inserts_for_label is not None
@@ -68,8 +85,10 @@ class FakeQuery:
                 raise RuntimeError("simulated insert failure")
             row = dict(self._insert_payload)
             rows.append(row)
+            self.db.ops.append(("insert", self.table_name))
             return type("R", (), {"data": [row]})()
         # update path (cluster assignment on embeddings) — no-op
+        self.db.ops.append(("update", self.table_name))
         return type("R", (), {"data": []})()
 
 
@@ -77,8 +96,13 @@ class FakeSupabase:
     def __init__(self):
         self.tables = {}
         self.deletes = []
+        self.ops = []
         self.fail_deletes = False
         self.fail_inserts_for_label = None
+        self.lock = threading.Lock()
+        self.in_flight = 0
+        self.max_concurrent = 0
+        self.write_delay = 0.0
 
     def table(self, name):
         return FakeQuery(self, name)
@@ -166,6 +190,49 @@ def test_insert_failure_surfaces_warning_others_persist():
     print("✅ Insert failure warns; other clusters persist")
 
 
+def test_cluster_writes_run_concurrently():
+    """Per-cluster writes (insert + node updates) must overlap, not serialize.
+
+    Sequential writes were ~20 round trips (~2s live) — one insert per
+    cluster plus one embedding update per affected node, back to back.
+    """
+    db = FakeSupabase()
+    db.write_delay = 0.05
+    clusters = [make_cluster("wf-A", f"cluster {i}") for i in range(4)]
+    # 4 clusters x (1 insert + 1 update) + 1 delete = 9 writes
+    sequential_time = 9 * db.write_delay
+    start = time.monotonic()
+    warnings = store(db, clusters, "wf-A")
+    elapsed = time.monotonic() - start
+    assert warnings == []
+    assert db.max_concurrent >= 2, (
+        f"writes never overlapped (max concurrent {db.max_concurrent})"
+    )
+    assert elapsed < sequential_time * 0.7, (
+        f"took {elapsed:.2f}s vs {sequential_time:.2f}s sequential — "
+        f"cluster writes still serialize"
+    )
+    assert len(db.tables["error_clusters"]) == 4
+    print(f"✅ Cluster writes overlap (max concurrent {db.max_concurrent}, "
+          f"{elapsed:.2f}s vs {sequential_time:.2f}s sequential)")
+
+
+def test_delete_completes_before_any_insert():
+    """The stale-clear must finish before fresh inserts start, or a slow
+    delete could wipe rows the same run just wrote."""
+    db = FakeSupabase()
+    db.write_delay = 0.02
+    clusters = [make_cluster("wf-A", f"cluster {i}") for i in range(3)]
+    store(db, clusters, "wf-A")
+    op_kinds = [op for op, table in db.ops if table == "error_clusters"]
+    assert op_kinds[0] == "delete", f"first cluster op was {op_kinds[0]}"
+    assert "delete" not in op_kinds[1:], (
+        "delete ran concurrently with inserts — must strictly precede them"
+    )
+    assert len(db.tables["error_clusters"]) == 3
+    print("✅ Delete strictly precedes all inserts")
+
+
 def test_delete_failure_warns_and_still_inserts():
     """If clearing stale rows fails, surface a warning but keep the analysis alive."""
     db = FakeSupabase()
@@ -184,6 +251,8 @@ if __name__ == "__main__":
         test_other_workflows_untouched,
         test_empty_result_clears_stale_clusters,
         test_insert_failure_surfaces_warning_others_persist,
+        test_cluster_writes_run_concurrently,
+        test_delete_completes_before_any_insert,
         test_delete_failure_warns_and_still_inserts,
     ]
     failures = 0

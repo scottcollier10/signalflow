@@ -761,10 +761,14 @@ class ErrorClusteringAnalyzer:
         """
         warnings = []
 
+        # The clear must fully complete before any insert starts — a delete
+        # racing the inserts could wipe rows this same run just wrote.
         try:
-            self.db.table('error_clusters').delete().eq(
-                'workflow_id', workflow_id
-            ).execute()
+            await asyncio.to_thread(
+                lambda: self.db.table('error_clusters').delete().eq(
+                    'workflow_id', workflow_id
+                ).execute()
+            )
         except Exception as e:
             warning = (
                 f"Failed to clear stale clusters for workflow "
@@ -773,36 +777,52 @@ class ErrorClusteringAnalyzer:
             logger.warning(warning)
             warnings.append(warning)
 
-        for cluster in clusters:
-            try:
-                self.db.table('error_clusters').insert({
-                    'id': cluster.id,
-                    'workflow_id': cluster.workflow_id,
-                    'label': cluster.label,
-                    'representative_error_id': cluster.representative_error_id,
-                    'representative_message': cluster.representative_message,
-                    'member_count': cluster.member_count,
-                    'avg_similarity': cluster.avg_similarity,
-                    'affected_nodes': cluster.affected_nodes,
-                    'pattern_type': cluster.pattern_type,
-                    'severity': cluster.severity
-                }).execute()
-
-                # Update error_embeddings with cluster assignment
-                for node in cluster.affected_nodes:
-                    self.db.table('error_embeddings').update({
-                        'cluster_id': cluster.id,
-                        'cluster_label': cluster.label
-                    }).eq('node_id', node['node_id']).eq(
-                        'error_message', cluster.representative_message
-                    ).execute()
-
-            except Exception as e:
-                warning = f"Failed to store cluster {cluster.id} ({cluster.label}): {e}"
-                logger.warning(warning)
-                warnings.append(warning)
+        if clusters:
+            # Each cluster's writes (insert + node updates) are independent
+            # of other clusters', so run them concurrently — sequentially
+            # this was ~20 blocking round trips (~2s against hosted Supabase).
+            results = await asyncio.gather(*(
+                asyncio.to_thread(self._store_cluster_sync, cluster)
+                for cluster in clusters
+            ))
+            warnings.extend(w for w in results if w is not None)
 
         return warnings
+
+    def _store_cluster_sync(self, cluster: ErrorCluster) -> Optional[str]:
+        """Persist one cluster and its embedding assignments.
+
+        Returns a warning string on failure, None on success.
+        """
+        try:
+            self.db.table('error_clusters').insert({
+                'id': cluster.id,
+                'workflow_id': cluster.workflow_id,
+                'label': cluster.label,
+                'representative_error_id': cluster.representative_error_id,
+                'representative_message': cluster.representative_message,
+                'member_count': cluster.member_count,
+                'avg_similarity': cluster.avg_similarity,
+                'affected_nodes': cluster.affected_nodes,
+                'pattern_type': cluster.pattern_type,
+                'severity': cluster.severity
+            }).execute()
+
+            # Update error_embeddings with cluster assignment
+            for node in cluster.affected_nodes:
+                self.db.table('error_embeddings').update({
+                    'cluster_id': cluster.id,
+                    'cluster_label': cluster.label
+                }).eq('node_id', node['node_id']).eq(
+                    'error_message', cluster.representative_message
+                ).execute()
+
+            return None
+
+        except Exception as e:
+            warning = f"Failed to store cluster {cluster.id} ({cluster.label}): {e}"
+            logger.warning(warning)
+            return warning
 
     # =============================================================================
     # Phase 5: Result Building
