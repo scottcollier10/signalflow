@@ -8,6 +8,7 @@ Week 3 Day 3: Error Clustering & Pattern Detection
 """
 
 import ast
+import asyncio
 import logging
 from dataclasses import dataclass, asdict
 from datetime import datetime
@@ -415,6 +416,20 @@ class ErrorClusteringAnalyzer:
             Embedding records (ascending distance), each with a parsed
             numpy `embedding` and its `distance` from the query
         """
+        # The RPC is blocking; run it in a thread so multiple lookups
+        # can be awaited concurrently (see _gather_neighbors).
+        return await asyncio.to_thread(
+            self._find_similar_errors_sync,
+            query_embedding, workflow_id, match_count, max_distance
+        )
+
+    def _find_similar_errors_sync(
+        self,
+        query_embedding: np.ndarray,
+        workflow_id: str,
+        match_count: int,
+        max_distance: float
+    ) -> List[Dict[str, Any]]:
         embedding_list = [float(x) for x in np.asarray(query_embedding).tolist()]
 
         response = self.db.rpc('match_error_embeddings', {
@@ -429,6 +444,31 @@ class ErrorClusteringAnalyzer:
             record['embedding'] = self._parse_embedding(record['embedding'])
 
         return results
+
+    async def _gather_neighbors(
+        self,
+        current: List[Dict[str, Any]],
+        workflow_id: str,
+        execution_window: int,
+        max_distance: float
+    ) -> List[List[Dict[str, Any]]]:
+        """
+        Fetch each current error's historical neighbors concurrently.
+
+        Sequential lookups meant one blocking round trip per error (36
+        errors ≈ 6.5s against hosted Supabase); the network waits dominate,
+        so fanning them out across threads collapses the wall time to
+        roughly one round trip. Returns neighbor lists in input order.
+        """
+        return await asyncio.gather(*(
+            self.find_similar_errors(
+                query_embedding=row['embedding'],
+                workflow_id=workflow_id,
+                match_count=execution_window,
+                max_distance=max_distance
+            )
+            for row in current
+        ))
 
     async def _cluster_errors(
         self,
@@ -460,15 +500,17 @@ class ErrorClusteringAnalyzer:
             return [], []
 
         # Retrieve similar historical errors for each current error
+        # (lookups run concurrently; merge order matches the sequential
+        # original: current errors first, then each error's neighbors)
         max_distance = 1 - similarity_threshold
         candidates = {row['id']: row for row in current}
-        for row in current:
-            neighbors = await self.find_similar_errors(
-                query_embedding=row['embedding'],
-                workflow_id=workflow_id,
-                match_count=execution_window,
-                max_distance=max_distance
-            )
+        neighbor_lists = await self._gather_neighbors(
+            current=current,
+            workflow_id=workflow_id,
+            execution_window=execution_window,
+            max_distance=max_distance
+        )
+        for neighbors in neighbor_lists:
             for neighbor in neighbors:
                 candidates.setdefault(neighbor['id'], neighbor)
 
