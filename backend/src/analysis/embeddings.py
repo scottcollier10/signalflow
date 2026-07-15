@@ -8,6 +8,8 @@ The model runs locally (no API key needed) and generates 384-dimensional vectors
 optimized for cosine similarity search.
 """
 
+import threading
+
 from sentence_transformers import SentenceTransformer
 from typing import List, Dict, Any
 import numpy as np
@@ -292,3 +294,25 @@ def clean_error_message(raw_message: str) -> str:
     cleaned = cleaned.lower()
 
     return cleaned
+
+
+# =============================================================================
+# Shared embedder singleton
+# =============================================================================
+# Loading the SentenceTransformer model costs ~1.4s and ~80MB RAM. Endpoints
+# construct analyzers per request, so the model must be loaded once per
+# process and shared. The lock prevents duplicate loads when concurrent
+# requests (asyncio.to_thread workers) race on first access.
+
+_shared_embedder = None
+_shared_embedder_lock = threading.Lock()
+
+
+def get_shared_embedder() -> ErrorEmbedder:
+    """Return the process-wide ErrorEmbedder, loading the model on first use."""
+    global _shared_embedder
+    if _shared_embedder is None:
+        with _shared_embedder_lock:
+            if _shared_embedder is None:
+                _shared_embedder = ErrorEmbedder()
+    return _shared_embedder

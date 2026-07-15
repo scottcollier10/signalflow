@@ -17,7 +17,7 @@ from sklearn.cluster import DBSCAN
 from sklearn.metrics.pairwise import cosine_distances, cosine_similarity
 import uuid
 
-from .embeddings import ErrorEmbedder, ErrorEvent, clean_error_message
+from .embeddings import ErrorEmbedder, ErrorEvent, clean_error_message, get_shared_embedder
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +127,16 @@ class ErrorClusteringAnalyzer:
             supabase_client: Initialized Supabase client for database operations
         """
         self.db = supabase_client
-        self.embedder = ErrorEmbedder()
+
+    @property
+    def embedder(self) -> ErrorEmbedder:
+        """Process-wide embedder, loaded lazily on first use.
+
+        Loading the model costs ~1.4s; zero-error analyses (the common
+        happy path) never touch it, and analyzers across requests share
+        one instance.
+        """
+        return get_shared_embedder()
 
     async def analyze_execution(
         self,
