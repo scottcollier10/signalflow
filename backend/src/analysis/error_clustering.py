@@ -317,20 +317,40 @@ class ErrorClusteringAnalyzer:
         if not errors:
             return []
 
-        # Generate embeddings in batch for efficiency
-        embeddings = self.embedder.generate_embeddings_batch(errors)
+        # Reuse embeddings already stored for this execution. Re-analyses
+        # (every page load hits this endpoint) must not insert duplicate
+        # rows: duplicates inflate the historical clustering set, corrupt
+        # summary counts, and make the endpoint slower on every run.
+        existing_response = self.db.table('error_embeddings').select(
+            'id, event_id'
+        ).eq('execution_id', execution_id).in_(
+            'event_id', [error.event_id for error in errors]
+        ).execute()
 
-        # Store each embedding
-        embedding_ids = []
-        for error, embedding in zip(errors, embeddings):
-            embedding_id = await self._store_embedding(
-                error=error,
-                embedding=embedding,
-                execution_id=execution_id
-            )
-            embedding_ids.append(embedding_id)
+        existing_by_event: Dict[str, str] = {}
+        for row in (existing_response.data or []):
+            # setdefault: if pre-fix pollution left multiple copies,
+            # consistently reuse the first stored row.
+            existing_by_event.setdefault(row['event_id'], row['id'])
 
-        return embedding_ids
+        new_errors = [e for e in errors if e.event_id not in existing_by_event]
+
+        # Only new errors are embedded — a full re-analysis never touches
+        # the embedding model at all.
+        new_ids_by_event: Dict[str, str] = {}
+        if new_errors:
+            embeddings = self.embedder.generate_embeddings_batch(new_errors)
+            for error, embedding in zip(new_errors, embeddings):
+                new_ids_by_event[error.event_id] = await self._store_embedding(
+                    error=error,
+                    embedding=embedding,
+                    execution_id=execution_id
+                )
+
+        return [
+            existing_by_event.get(error.event_id, new_ids_by_event.get(error.event_id))
+            for error in errors
+        ]
 
     async def _store_embedding(
         self,
