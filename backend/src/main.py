@@ -22,6 +22,11 @@ logger = logging.getLogger("signalflow.api")
 # 10MB; anything larger is either malformed or not worth parsing in-memory.
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
+# Page size for batched execution_events fetches. Matches PostgREST's default
+# max-rows cap (1000): requesting more than the cap silently truncates the
+# response, which undercounts nodes/errors on the dashboard.
+EVENTS_PAGE_SIZE = 1000
+
 
 async def _read_execution_upload(file: UploadFile) -> dict:
     """Read an uploaded execution file with size and shape validation."""
@@ -357,10 +362,14 @@ async def get_bottlenecks(
         # Create analyzer
         analyzer = BottleneckAnalyzer(supabase)
 
-        # Analyze bottlenecks
-        bottlenecks = analyzer.analyze(execution_id, workflow_id, limit=100)  # Get all first
+        # Analyze bottlenecks ONCE: the same pass serves both the filtered
+        # display list and the full-list summary. (Previously analyze() ran
+        # twice per request, doubling all DB reads and the node_stats
+        # delete+insert.)
+        all_bottlenecks = analyzer.analyze(execution_id, workflow_id, limit=1000)
 
         # Apply filters
+        bottlenecks = all_bottlenecks
         if severity:
             bottlenecks = [b for b in bottlenecks if b.severity == severity]
         if min_score is not None:
@@ -369,8 +378,6 @@ async def get_bottlenecks(
         # Apply limit after filters
         bottlenecks = bottlenecks[:limit]
 
-        # Get all bottlenecks for summary (before limit)
-        all_bottlenecks = analyzer.analyze(execution_id, workflow_id, limit=1000)
         summary = analyzer.get_summary(all_bottlenecks, len(all_bottlenecks))
 
         # Get total execution duration for context
@@ -398,8 +405,7 @@ async def get_bottlenecks(
                     nodes_with_recommendations.add(node_id)
 
             # Set has_recommendations flag on each bottleneck
-            for b in bottlenecks:
-                b.has_recommendations = b.node_id in nodes_with_recommendations
+            # (bottlenecks is a filtered view of all_bottlenecks — same objects)
             for b in all_bottlenecks:
                 b.has_recommendations = b.node_id in nodes_with_recommendations
 
@@ -407,8 +413,6 @@ async def get_bottlenecks(
         except Exception as e:
             print(f"Warning: Could not generate recommendations for has_recommendations flag: {e}")
             recommendation_count = 0
-            for b in bottlenecks:
-                b.has_recommendations = False
             for b in all_bottlenecks:
                 b.has_recommendations = False
 
@@ -687,18 +691,32 @@ async def list_executions(limit: int = 100, status: str = None):
             for cp in (cp_result.data or []):
                 critical_path_map[cp["execution_id"]] = cp.get("total_duration_ms")
 
+        # Batch-fetch events for all executions in one paginated query
+        # (previously one query PER execution — an N+1 that dominated
+        # dashboard load time). Paginate with .range() so PostgREST's
+        # max-rows cap can't silently truncate the counts.
+        events_by_execution = {}
+        if execution_ids:
+            offset = 0
+            while True:
+                page_result = supabase.table("execution_events")\
+                    .select("execution_id, node_id, status")\
+                    .in_("execution_id", execution_ids)\
+                    .range(offset, offset + EVENTS_PAGE_SIZE - 1)\
+                    .execute()
+                page = page_result.data or []
+                for event in page:
+                    events_by_execution.setdefault(event["execution_id"], []).append(event)
+                if len(page) < EVENTS_PAGE_SIZE:
+                    break
+                offset += EVENTS_PAGE_SIZE
+
         # Enrich executions with workflow info and counts
         enriched = []
         for exec in executions:
             workflow = workflow_map.get(exec.get("workflow_id"), {})
 
-            # Count nodes from execution_events
-            events_result = supabase.table("execution_events")\
-                .select("node_id, status")\
-                .eq("execution_id", exec["id"])\
-                .execute()
-
-            events = events_result.data or []
+            events = events_by_execution.get(exec["id"], [])
             unique_nodes = set(e["node_id"] for e in events)
             error_count = sum(1 for e in events if e.get("status") == "error")
 
