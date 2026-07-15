@@ -12,6 +12,7 @@ from src.analysis.recommendations import RecommendationEngine
 from src.analysis.comparison import ComparisonAnalyzer
 from supabase import create_client
 from datetime import datetime
+import asyncio
 import json
 import logging
 import httpx
@@ -301,14 +302,14 @@ async def get_critical_path(workflow_id: str, execution_id: str):
     - Should include claude_ai_generate node
     """
     try:
-        # Create Supabase client
-        supabase = create_client(settings.supabase_url, settings.supabase_key)
+        # Blocking work (sync Supabase client + analysis) runs in a worker
+        # thread so parallel requests don't serialize on the event loop
+        def _analyze():
+            supabase = create_client(settings.supabase_url, settings.supabase_key)
+            analyzer = CriticalPathAnalyzer(supabase)
+            return analyzer.get_critical_path_with_details(execution_id, workflow_id)
 
-        # Create analyzer and calculate critical path
-        analyzer = CriticalPathAnalyzer(supabase)
-        result = analyzer.get_critical_path_with_details(execution_id, workflow_id)
-
-        return result
+        return await asyncio.to_thread(_analyze)
 
     except ValueError as e:
         # Graph validation errors (e.g., cycles detected)
@@ -356,87 +357,70 @@ async def get_bottlenecks(
     - min_score: Only return nodes with score >= threshold
     """
     try:
-        # Create Supabase client
-        supabase = create_client(settings.supabase_url, settings.supabase_key)
+        # Blocking work runs in a worker thread so parallel requests don't
+        # serialize on the event loop
+        def _analyze():
+            supabase = create_client(settings.supabase_url, settings.supabase_key)
+            analyzer = BottleneckAnalyzer(supabase)
 
-        # Create analyzer
-        analyzer = BottleneckAnalyzer(supabase)
+            # Analyze bottlenecks ONCE: the same pass serves both the filtered
+            # display list and the full-list summary. (Previously analyze() ran
+            # twice per request, doubling all DB reads and the node_stats
+            # delete+insert.)
+            all_bottlenecks = analyzer.analyze(execution_id, workflow_id, limit=1000)
 
-        # Analyze bottlenecks ONCE: the same pass serves both the filtered
-        # display list and the full-list summary. (Previously analyze() ran
-        # twice per request, doubling all DB reads and the node_stats
-        # delete+insert.)
-        all_bottlenecks = analyzer.analyze(execution_id, workflow_id, limit=1000)
+            # Apply filters
+            bottlenecks = all_bottlenecks
+            if severity:
+                bottlenecks = [b for b in bottlenecks if b.severity == severity]
+            if min_score is not None:
+                bottlenecks = [b for b in bottlenecks if b.score >= min_score]
 
-        # Apply filters
-        bottlenecks = all_bottlenecks
-        if severity:
-            bottlenecks = [b for b in bottlenecks if b.severity == severity]
-        if min_score is not None:
-            bottlenecks = [b for b in bottlenecks if b.score >= min_score]
+            # Apply limit after filters
+            bottlenecks = bottlenecks[:limit]
 
-        # Apply limit after filters
-        bottlenecks = bottlenecks[:limit]
+            summary = analyzer.get_summary(all_bottlenecks, len(all_bottlenecks))
 
-        summary = analyzer.get_summary(all_bottlenecks, len(all_bottlenecks))
+            # Get total execution duration for context
+            critical_path_data = analyzer._load_critical_path(execution_id)
+            total_duration_ms = critical_path_data.get('total_duration_ms', 0) if critical_path_data else 0
 
-        # Get total execution duration for context
-        critical_path_data = analyzer._load_critical_path(execution_id)
-        total_duration_ms = critical_path_data.get('total_duration_ms', 0) if critical_path_data else 0
+            # Calculate critical path percentage
+            path_percentage = 0
+            if critical_path_data:
+                path_nodes_count = len(critical_path_data['path_nodes'])
+                total_nodes = len(all_bottlenecks)
+                path_percentage = (path_nodes_count / total_nodes * 100) if total_nodes > 0 else 0
 
-        # Calculate critical path percentage
-        path_percentage = 0
-        if critical_path_data:
-            path_nodes_count = len(critical_path_data['path_nodes'])
-            total_nodes = len(all_bottlenecks)
-            path_percentage = (path_nodes_count / total_nodes * 100) if total_nodes > 0 else 0
+            # NOTE: the full RecommendationEngine used to run inline here just
+            # to set has_recommendations on each bottleneck — but nothing in
+            # the frontend consumes that flag, and the execution page already
+            # fetches /recommendations in the same batch (so the 40-rule
+            # engine ran twice per page load). has_recommendations stays None
+            # and the verdict's recommendation_count is None (never a
+            # fabricated 0).
+            verdict = analyzer.get_optimization_verdict(all_bottlenecks, total_duration_ms)
 
-        # Generate recommendations to check which bottlenecks have fixes
-        # This enables the "View Fix" button on bottleneck cards
-        try:
-            engine = RecommendationEngine(supabase)
-            rec_result = await engine.generate_recommendations(execution_id, workflow_id)
-            recommendations = rec_result.get('data', {}).get('recommendations', [])
-
-            # Build set of node_ids that have recommendations
-            nodes_with_recommendations = set()
-            for rec in recommendations:
-                for node_id in rec.get('affected_node_ids', []):
-                    nodes_with_recommendations.add(node_id)
-
-            # Set has_recommendations flag on each bottleneck
-            # (bottlenecks is a filtered view of all_bottlenecks — same objects)
-            for b in all_bottlenecks:
-                b.has_recommendations = b.node_id in nodes_with_recommendations
-
-            recommendation_count = len(recommendations)
-        except Exception as e:
-            print(f"Warning: Could not generate recommendations for has_recommendations flag: {e}")
-            recommendation_count = 0
-            for b in all_bottlenecks:
-                b.has_recommendations = False
-
-        # Generate optimization verdict (now aware of recommendations)
-        verdict = analyzer.get_optimization_verdict(all_bottlenecks, total_duration_ms, recommendation_count)
-
-        return {
-            "success": True,
-            "data": {
-                "bottlenecks": [b.to_dict() for b in bottlenecks],
-                "summary": {
-                    **summary,
-                    "total_execution_duration_ms": total_duration_ms
-                },
-                "verdict": verdict,
-                "analysis_context": {
-                    "execution_id": execution_id,
-                    "analysis_type": "single_execution",
-                    "critical_path_percentage": round(path_percentage, 2),
-                    "calculated_at": datetime.utcnow().isoformat() + "Z",
-                    "from_cache": False
+            return {
+                "success": True,
+                "data": {
+                    "bottlenecks": [b.to_dict() for b in bottlenecks],
+                    "summary": {
+                        **summary,
+                        "total_execution_duration_ms": total_duration_ms
+                    },
+                    "verdict": verdict,
+                    "analysis_context": {
+                        "execution_id": execution_id,
+                        "analysis_type": "single_execution",
+                        "critical_path_percentage": round(path_percentage, 2),
+                        "calculated_at": datetime.utcnow().isoformat() + "Z",
+                        "from_cache": False
+                    }
                 }
             }
-        }
+
+        return await asyncio.to_thread(_analyze)
 
     except ValueError as e:
         # Critical path not found or invalid data
@@ -516,20 +500,22 @@ async def get_error_analysis(
                 detail="execution_window must be between 1 and 1000"
             )
 
-        # Create Supabase client
-        supabase = create_client(settings.supabase_url, settings.supabase_key)
+        # Blocking work (model load, embeddings, sync Supabase) runs in a
+        # worker thread so parallel requests don't serialize on the event
+        # loop. The analyzer's async API never awaits real I/O, so it is
+        # driven by its own loop inside the worker.
+        def _analyze():
+            supabase = create_client(settings.supabase_url, settings.supabase_key)
+            analyzer = ErrorClusteringAnalyzer(supabase)
+            return asyncio.run(analyzer.analyze_execution(
+                execution_id=execution_id,
+                workflow_id=workflow_id,
+                include_historical=include_historical,
+                similarity_threshold=similarity_threshold,
+                execution_window=execution_window
+            ))
 
-        # Create analyzer
-        analyzer = ErrorClusteringAnalyzer(supabase)
-
-        # Analyze errors
-        result = await analyzer.analyze_execution(
-            execution_id=execution_id,
-            workflow_id=workflow_id,
-            include_historical=include_historical,
-            similarity_threshold=similarity_threshold,
-            execution_window=execution_window
-        )
+        result = await asyncio.to_thread(_analyze)
 
         return {
             "success": True,
@@ -606,16 +592,15 @@ async def get_recommendations(workflow_id: str, execution_id: str):
     }
     """
     try:
-        # Create Supabase client
-        supabase = create_client(settings.supabase_url, settings.supabase_key)
+        # Blocking work runs in a worker thread so parallel requests don't
+        # serialize on the event loop. The engine's async API never awaits
+        # real I/O, so it is driven by its own loop inside the worker.
+        def _generate():
+            supabase = create_client(settings.supabase_url, settings.supabase_key)
+            engine = RecommendationEngine(supabase)
+            return asyncio.run(engine.generate_recommendations(execution_id, workflow_id))
 
-        # Create recommendation engine
-        engine = RecommendationEngine(supabase)
-
-        # Generate recommendations
-        result = await engine.generate_recommendations(execution_id, workflow_id)
-
-        return result
+        return await asyncio.to_thread(_generate)
 
     except ValueError as e:
         # Missing required analysis data
@@ -651,7 +636,7 @@ async def list_executions(limit: int = 100, status: str = None):
     Returns:
         List of execution records with workflow info
     """
-    try:
+    def _list():
         supabase = create_client(settings.supabase_url, settings.supabase_key)
 
         # Build query
@@ -734,6 +719,10 @@ async def list_executions(limit: int = 100, status: str = None):
 
         return enriched
 
+    try:
+        # Blocking work runs in a worker thread so parallel requests don't
+        # serialize on the event loop
+        return await asyncio.to_thread(_list)
     except Exception:
         logger.exception("Failed to list executions")
         raise HTTPException(status_code=500, detail="Failed to retrieve executions")
@@ -772,7 +761,7 @@ async def get_execution(execution_id: str):
 
     Returns execution record with workflow_id, status, duration, etc.
     """
-    try:
+    def _get():
         supabase = create_client(settings.supabase_url, settings.supabase_key)
         result = supabase.table("executions")\
             .select("*")\
@@ -812,6 +801,10 @@ async def get_execution(execution_id: str):
             "workflow": workflow
         }
 
+    try:
+        # Blocking work runs in a worker thread so parallel requests don't
+        # serialize on the event loop
+        return await asyncio.to_thread(_get)
     except HTTPException:
         raise
     except Exception:

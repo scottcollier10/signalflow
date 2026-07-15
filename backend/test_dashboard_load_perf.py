@@ -16,6 +16,20 @@ The dashboard was slow because of two server-side patterns:
    so everything was doubled, including the writes. One analyze() call must
    serve both the filtered display list and the summary.
 
+The execution page was slow for two more reasons:
+
+3. Every analysis endpoint is `async def` but does blocking sync work
+   (Supabase client, analyzers, embeddings) directly on the event loop, so
+   the frontend's 4 parallel fetches serialized server-side (~4.2s wall =
+   the SUM of the endpoint times, not the max). Blocking work must run in
+   a worker thread (asyncio.to_thread).
+
+4. /bottlenecks ran the full 40-rule RecommendationEngine inline just to
+   set a has_recommendations flag that nothing in the frontend consumes —
+   and the same page load already fetches /recommendations, running the
+   engine a second time. The inline run must go: has_recommendations stays
+   null and verdict.stats.recommendation_count is null.
+
 Verifies:
 1. /api/executions issues exactly ONE execution_events query regardless of
    how many executions are listed, with correct node_count / error_count.
@@ -23,16 +37,21 @@ Verifies:
    rows per response (simulated cap smaller than the event count).
 3. Bottlenecks endpoint runs the analysis once: node_stats is written
    exactly once and execution_events is not loaded twice by the analyzer.
+4. Execution-page endpoints run their DB work OFF the event loop thread.
+5. /bottlenecks does not run the recommendation engine.
 
 Run: venv/bin/python test_dashboard_load_perf.py
 """
 
+import asyncio
 import sys
+import threading
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+import httpx
 from fastapi.testclient import TestClient
 
 from src.main import app
@@ -122,16 +141,16 @@ class FakeSupabase:
     def __init__(self, tables, max_rows=None):
         self.tables = tables
         self.max_rows = max_rows
-        self.query_log = []  # (table, op) tuples
+        self.query_log = []  # (table, op, thread_ident) tuples
 
     def table(self, name):
         return FakeQuery(self, name)
 
     def log(self, table, op):
-        self.query_log.append((table, op))
+        self.query_log.append((table, op, threading.get_ident()))
 
     def count(self, table, op):
-        return sum(1 for t, o in self.query_log if t == table and o == op)
+        return sum(1 for t, o, _ in self.query_log if t == table and o == op)
 
 
 # =============================================================================
@@ -176,6 +195,7 @@ def bottlenecks_db():
         }],
         "workflows": [{
             "id": WF_ID,
+            "name": "Demo WF",
             "raw_json": {"nodes": [
                 {"id": "uuid-http", "name": "Enrich: Company Data",
                  "type": "n8n-nodes-base.httpRequest"},
@@ -193,6 +213,20 @@ def bottlenecks_db():
                         "status": "success", "duration_ms": 10000}],
         "node_stats": [],
     })
+
+
+class StubErrorAnalyzer:
+    """Stands in for ErrorClusteringAnalyzer, whose __init__ loads an ~80MB
+    sentence-transformers model. Does one blocking DB query (the property
+    under test) and returns an empty result."""
+
+    def __init__(self, supabase):
+        self.db = supabase
+
+    async def analyze_execution(self, execution_id, **kwargs):
+        self.db.table("execution_events").select("*")\
+            .eq("execution_id", execution_id).execute()
+        return Mock(to_dict=lambda: {"execution_errors": [], "clusters": []})
 
 
 # =============================================================================
@@ -294,12 +328,77 @@ def test_bottlenecks_filters_still_apply():
     print("✅ limit=1 returns 1 bottleneck while summary covers all 2 nodes")
 
 
+def test_bottlenecks_skips_recommendation_engine():
+    print("\n=== Test: /bottlenecks does not run the recommendation engine ===")
+    db = bottlenecks_db()
+
+    with patch("src.main.create_client", return_value=db):
+        resp = client.get(f"/api/workflows/{WF_ID}/executions/exec-1/bottlenecks")
+
+    assert resp.status_code == 200, resp.text
+    data = resp.json()["data"]
+
+    # The analyzer loads execution_events exactly once. The inline
+    # RecommendationEngine loaded them a second time (plus executions,
+    # error clusters, ...) just to set a flag nothing consumes.
+    event_selects = db.count("execution_events", "select")
+    assert event_selects == 1, (
+        f"execution_events selected {event_selects}x — the recommendation "
+        f"engine is still running inline"
+    )
+
+    # Contract: flag and count are now null, never fabricated
+    assert data["bottlenecks"][0]["has_recommendations"] is None, data["bottlenecks"][0]
+    assert data["verdict"]["stats"]["recommendation_count"] is None, data["verdict"]
+    assert data["verdict"]["status"], data["verdict"]
+    print("✅ 1 execution_events load; has_recommendations/recommendation_count are null")
+
+
+async def _run_off_loop_checks():
+    db = bottlenecks_db()
+    loop_thread = threading.get_ident()
+    endpoints = [
+        ("/api/executions", 200),
+        ("/api/executions/exec-1", 200),
+        (f"/api/workflows/{WF_ID}/executions/exec-1/critical-path", None),
+        (f"/api/workflows/{WF_ID}/executions/exec-1/bottlenecks", 200),
+        (f"/api/workflows/{WF_ID}/executions/exec-1/error-analysis", 200),
+        (f"/api/workflows/{WF_ID}/executions/exec-1/recommendations", 200),
+    ]
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as ac:
+        with patch("src.main.create_client", return_value=db), \
+             patch("src.main.ErrorClusteringAnalyzer", StubErrorAnalyzer):
+            for path, expected_status in endpoints:
+                before = len(db.query_log)
+                resp = await ac.get(path)
+                if expected_status is not None:
+                    assert resp.status_code == expected_status, f"{path}: {resp.text}"
+                queries = db.query_log[before:]
+                assert queries, f"{path}: no DB queries recorded"
+                on_loop = [(t, o) for t, o, tid in queries if tid == loop_thread]
+                assert not on_loop, (
+                    f"{path}: {len(on_loop)} DB queries ran ON the event loop "
+                    f"thread (blocks parallel requests): {on_loop[:5]}"
+                )
+                print(f"  ✅ {path}: {len(queries)} queries, all off-loop")
+
+
+def test_endpoints_run_db_work_off_event_loop():
+    print("\n=== Test: execution-page endpoints do DB work off the event loop ===")
+    asyncio.run(_run_off_loop_checks())
+    print("✅ All endpoints keep blocking DB work off the event loop")
+
+
 def main():
     tests = [
         test_list_executions_batches_event_counts,
         test_batched_event_fetch_paginates_past_row_cap,
         test_bottlenecks_endpoint_analyzes_once,
         test_bottlenecks_filters_still_apply,
+        test_bottlenecks_skips_recommendation_engine,
+        test_endpoints_run_db_work_off_event_loop,
     ]
 
     print("=" * 60)
