@@ -7,32 +7,42 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Neumorphic Dark Theme
-        'neu-bg': '#1e2028',
-        'neu-accent': '#a89be0',
-        'neu-accent-light': '#c4b8f0',
+        // Flat Dark Theme
+        'neu-bg': '#141414',
+        'neu-accent': '#8b7ec8',
+        'neu-accent-light': '#a89be0',
         'neu-dark': '#f0f0f4',
-        'neu-text': '#d8d8e0',
-        'neu-text-muted': '#9a9eb0',
-        'neu-shadow-dark': '#14161c',
-        'neu-shadow-light': '#282c38',
-        'neu-teal': '#4dc9b0',
-        'neu-orange': '#f0956a',
-        'neu-green': '#5ed4a0',
-        'neu-coral': '#f08b7a',
+        'neu-text': '#e5e5e5',
+        'neu-text-muted': '#888888',
+        'neu-shadow-dark': '#0a0a0a',
+        'neu-shadow-light': '#333333',
+        'neu-teal': '#2d8a7b',
+        'neu-orange': '#e85a2c',
+        'neu-green': '#22c55e',
+        'neu-coral': '#ef4444',
+        // Additional tokens for flat card system
+        'neu-card': '#232323',
+        'neu-card-hover': '#2a2a2a',
+        'neu-card-inner': '#1c1c1c',
+        'neu-sidebar': '#1a1a1a',
+        'neu-border': '#333333',
+        'neu-purple-bg': '#3d3556',
+        'neu-yellow': '#eab308',
+        'neu-blue': '#3b82f6',
+        'neu-red': '#ef4444',
       },
       fontFamily: {
-        'display': ['Outfit', 'sans-serif'],
+        'display': ['Instrument Sans', 'sans-serif'],
         'body': ['DM Sans', 'sans-serif'],
         'sans': ['DM Sans', 'sans-serif'], // Default
       },
       boxShadow: {
-        // Neumorphic Shadows
-        'neu-raised': '8px 8px 16px #14161c, -8px -8px 16px #282c38',
-        'neu-raised-sm': '5px 5px 10px #14161c, -5px -5px 10px #282c38',
-        'neu-raised-lg': '12px 12px 24px #14161c, -12px -12px 24px #282c38',
-        'neu-inset': 'inset 5px 5px 10px #14161c, inset -5px -5px 10px #282c38',
-        'neu-flat': '6px 6px 12px #14161c, -6px -6px 12px #282c38',
+        // Flat theme shadows (subtle, non-neumorphic)
+        'neu-raised': '0 2px 8px rgba(0, 0, 0, 0.3)',
+        'neu-raised-sm': '0 1px 4px rgba(0, 0, 0, 0.2)',
+        'neu-raised-lg': '0 8px 25px rgba(0, 0, 0, 0.3)',
+        'neu-inset': 'inset 0 1px 3px rgba(0, 0, 0, 0.3)',
+        'neu-flat': '0 1px 3px rgba(0, 0, 0, 0.2)',
       },
       borderRadius: {
         'neu-sm': '8px',

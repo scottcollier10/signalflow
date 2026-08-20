@@ -2,7 +2,7 @@
 
 /**
  * Critical Path View component
- * Shows detailed critical path analysis with neumorphic design
+ * Shows detailed critical path analysis with flat dark theme
  */
 
 import { CriticalPathResponse, formatDuration } from '@/lib/api/analysis';
@@ -37,7 +37,7 @@ export function CriticalPathView({ data }: CriticalPathViewProps) {
           <div className="text-2xl font-display font-bold text-neu-teal">
             {summary.path_percentage.toFixed(1)}%
           </div>
-          <div className="mt-2 bg-neu-shadow-dark/30 rounded-full h-2">
+          <div className="mt-2 bg-black/10 rounded-full h-2">
             <div
               className="bg-gradient-to-r from-neu-accent to-neu-accent-light h-2 rounded-full"
               style={{ width: `${summary.path_percentage}%` }}
@@ -82,7 +82,7 @@ export function CriticalPathView({ data }: CriticalPathViewProps) {
 
                   {/* Duration bar */}
                   <div className="mt-3">
-                    <div className="bg-neu-shadow-dark/30 rounded-full h-2">
+                    <div className="bg-black/10 rounded-full h-2">
                       <div
                         className="bg-neu-coral h-2 rounded-full"
                         style={{ width: `${(node.duration_ms / summary.total_duration_ms) * 100}%` }}
@@ -96,7 +96,7 @@ export function CriticalPathView({ data }: CriticalPathViewProps) {
         </div>
 
         {/* Legend */}
-        <div className="mt-6 pt-4 border-t border-neu-shadow-light/30">
+        <div className="mt-6 pt-4 border-t border-neu-border">
           <div className="flex items-center gap-2 text-sm text-neu-text-muted">
             <div className="w-4 h-4 bg-neu-coral rounded-full" />
             <span>Critical path nodes - These nodes are blocking execution completion</span>
@@ -111,7 +111,7 @@ export function CriticalPathView({ data }: CriticalPathViewProps) {
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead>
-              <tr className="border-b border-neu-shadow-light/30">
+              <tr className="border-b border-neu-border">
                 <th className="py-3 px-4 text-left text-xs font-medium text-neu-text-muted uppercase">
                   Rank
                 </th>
@@ -126,12 +126,12 @@ export function CriticalPathView({ data }: CriticalPathViewProps) {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neu-shadow-light/20">
+            <tbody className="divide-y divide-neu-border/50">
               {[...path_nodes]
                 .sort((a, b) => b.duration_ms - a.duration_ms)
                 .slice(0, 10)
                 .map((node, index) => (
-                  <tr key={node.node_id} className="hover:bg-neu-shadow-light/10 transition-colors">
+                  <tr key={node.node_id} className="hover:bg-white/5 transition-colors">
                     <td className="py-3 px-4 text-sm text-neu-text-muted">
                       #{index + 1}
                     </td>

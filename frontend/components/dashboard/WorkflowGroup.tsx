@@ -60,7 +60,7 @@ export function WorkflowGroup({
       {/* Header - Clickable to expand/collapse */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-5 py-4 flex items-center justify-between gap-4 hover:bg-neu-shadow-light/10 transition-colors"
+        className="w-full px-5 py-4 flex items-center justify-between gap-4 hover:bg-white/5 transition-colors"
       >
         <div className="flex items-center gap-4">
           {/* Accent indicator */}
@@ -69,7 +69,7 @@ export function WorkflowGroup({
           {/* Icon */}
           <div
             className="w-12 h-12 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: 'linear-gradient(145deg, #242830, #1a1c22)' }}
+            style={{ background: '#232323' }}
           >
             <svg className="w-6 h-6 text-neu-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -143,7 +143,7 @@ export function WorkflowGroup({
 
                     {/* Version number badge (subtle, top-right) */}
                     <div className="absolute -top-2 -right-2 z-10">
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-neu-shadow-dark/50 text-neu-text-muted font-mono">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-black/20 text-neu-text-muted font-mono">
                         V{versionNumber}
                       </span>
                     </div>
@@ -160,7 +160,7 @@ export function WorkflowGroup({
                     {/* Baseline Badge */}
                     {isBaseline && (
                       <div className="absolute -top-2 -left-2 z-10">
-                        <span className="text-xs px-2 py-1 rounded-full bg-neu-shadow-dark text-neu-text-muted border border-neu-text-muted/30">
+                        <span className="text-xs px-2 py-1 rounded-full bg-neu-sidebar text-neu-text-muted border border-neu-text-muted/30">
                           Baseline
                         </span>
                       </div>

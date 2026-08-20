@@ -34,7 +34,7 @@ export default function VariantD() {
                 className="h-full rounded-lg"
                 style={{
                   width: '100%',
-                  background: 'linear-gradient(90deg, #f08b7a 0%, #f0956a 100%)',
+                  background: 'linear-gradient(90deg, #ef4444 0%, #e85a2c 100%)',
                 }}
               />
             </div>
@@ -51,7 +51,7 @@ export default function VariantD() {
                 className="h-full rounded-lg"
                 style={{
                   width: `${afterWidth}%`,
-                  background: 'linear-gradient(90deg, #4dc9b0 0%, #5ed4a0 100%)',
+                  background: 'linear-gradient(90deg, #2d8a7b 0%, #22c55e 100%)',
                 }}
               />
             </div>

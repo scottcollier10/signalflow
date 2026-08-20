@@ -3,7 +3,7 @@
 /**
  * Overview tab showing executive summary of all analyses
  * Includes scoring explanations for bottlenecks and recommendations
- * With neumorphic design
+ * With flat dark theme
  */
 
 import { useState } from 'react';
@@ -144,7 +144,7 @@ export function AnalysisOverview({ data, onViewEvidence, onTabChange }: Analysis
                   <span className="text-neu-text-muted"><strong className="text-neu-text">Variance</strong> — Inconsistent times indicate problems</span>
                 </div>
               </div>
-              <div className="mt-4 pt-3 border-t border-neu-shadow-light/30">
+              <div className="mt-4 pt-3 border-t border-neu-border">
                 <div className="text-xs font-medium text-neu-text mb-2">Severity Thresholds:</div>
                 <div className="flex flex-wrap gap-2">
                   <span className="px-2 py-1 bg-neu-coral/15 text-neu-coral text-xs rounded">Severe: 90-100</span>
@@ -166,7 +166,7 @@ export function AnalysisOverview({ data, onViewEvidence, onTabChange }: Analysis
               <p className="text-sm text-neu-text-muted mb-3">
                 Ranks recommendations by potential value using this formula:
               </p>
-              <div className="bg-neu-shadow-dark/30 rounded p-3 font-mono text-sm text-center mb-3 text-neu-text">
+              <div className="bg-black/10 rounded p-3 font-mono text-sm text-center mb-3 text-neu-text">
                 priority = impact_score × effort_multiplier × 100
               </div>
               <div className="space-y-2 text-sm">
@@ -179,7 +179,7 @@ export function AnalysisOverview({ data, onViewEvidence, onTabChange }: Analysis
                   <span className="text-neu-text-muted ml-2">Low=1.0, Medium=0.7, High=0.4 — easier fixes rank higher at equal impact</span>
                 </div>
               </div>
-              <div className="mt-4 pt-3 border-t border-neu-shadow-light/30">
+              <div className="mt-4 pt-3 border-t border-neu-border">
                 <div className="text-xs font-medium text-neu-text mb-2">Impact Levels:</div>
                 <div className="flex flex-wrap gap-2">
                   <span className="px-2 py-1 bg-neu-coral/15 text-neu-coral text-xs rounded border border-neu-coral/30">Critical</span>
@@ -238,7 +238,7 @@ export function AnalysisOverview({ data, onViewEvidence, onTabChange }: Analysis
 
           {topRecommendation ? (
             <div
-              className="neu-flat p-4 border border-neu-accent/20 cursor-pointer hover:shadow-neu-raised transition-all"
+              className="neu-flat p-4 border border-neu-accent/20 cursor-pointer transition-all"
               onClick={() => onViewEvidence(topRecommendation)}
             >
               <div className="flex items-start justify-between gap-3">
@@ -290,7 +290,7 @@ export function AnalysisOverview({ data, onViewEvidence, onTabChange }: Analysis
           <div className="flex-1">
             <div className="text-sm text-neu-text-muted mb-2">Path Coverage</div>
             <div className="flex items-center gap-3">
-              <div className="flex-1 bg-neu-shadow-dark/30 rounded-full h-3">
+              <div className="flex-1 bg-black/10 rounded-full h-3">
                 <div
                   className="bg-gradient-to-r from-neu-accent to-neu-accent-light h-3 rounded-full"
                   style={{ width: `${criticalPath.summary.path_percentage}%` }}

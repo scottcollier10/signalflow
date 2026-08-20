@@ -168,7 +168,7 @@ export default function SettingsPage() {
 
         {/* n8n Connection */}
         <section className="neu-raised overflow-hidden">
-          <div className="p-6 border-b border-neu-shadow-light/30">
+          <div className="p-6 border-b border-neu-border">
             <h2 className="font-display text-lg font-semibold text-neu-text flex items-center gap-2">
               <Link className="w-5 h-5 text-neu-orange" />
               n8n Connection
@@ -188,7 +188,7 @@ export default function SettingsPage() {
                 value={n8nUrl}
                 onChange={(e) => setN8nUrl(e.target.value)}
                 placeholder="https://your-instance.app.n8n.cloud"
-                className="w-full px-3 py-2 bg-neu-bg border border-neu-shadow-light/30 rounded-lg text-neu-text focus:ring-2 focus:ring-neu-accent focus:border-transparent transition-colors placeholder:text-neu-text-muted/50"
+                className="w-full px-3 py-2 bg-neu-bg border border-neu-border rounded-lg text-neu-text focus:ring-2 focus:ring-neu-accent focus:border-transparent transition-colors placeholder:text-neu-text-muted/50"
               />
               <p className="text-xs text-neu-text-muted mt-1">
                 Your n8n cloud or self-hosted instance URL
@@ -205,7 +205,7 @@ export default function SettingsPage() {
                   value={n8nApiKey}
                   onChange={(e) => setN8nApiKey(e.target.value)}
                   placeholder="Enter your n8n API key"
-                  className="w-full px-3 py-2 pr-10 bg-neu-bg border border-neu-shadow-light/30 rounded-lg text-neu-text focus:ring-2 focus:ring-neu-accent focus:border-transparent transition-colors placeholder:text-neu-text-muted/50"
+                  className="w-full px-3 py-2 pr-10 bg-neu-bg border border-neu-border rounded-lg text-neu-text focus:ring-2 focus:ring-neu-accent focus:border-transparent transition-colors placeholder:text-neu-text-muted/50"
                 />
                 <button
                   type="button"
@@ -253,7 +253,7 @@ export default function SettingsPage() {
 
         {/* Preferences */}
         <section className="neu-raised overflow-hidden">
-          <div className="p-6 border-b border-neu-shadow-light/30">
+          <div className="p-6 border-b border-neu-border">
             <h2 className="font-display text-lg font-semibold text-neu-text flex items-center gap-2">
               <Bell className="w-5 h-5 text-neu-accent" />
               Preferences
@@ -272,7 +272,7 @@ export default function SettingsPage() {
                 <select
                   value={defaultView}
                   onChange={(e) => setDefaultView(e.target.value)}
-                  className="w-full px-3 py-2 bg-neu-bg border border-neu-shadow-light/30 rounded-lg text-neu-text focus:ring-2 focus:ring-neu-accent transition-colors"
+                  className="w-full px-3 py-2 bg-neu-bg border border-neu-border rounded-lg text-neu-text focus:ring-2 focus:ring-neu-accent transition-colors"
                 >
                   <option value="overview">Overview</option>
                   <option value="playback">Playback</option>
@@ -288,7 +288,7 @@ export default function SettingsPage() {
                 <select
                   value={dashboardGrouping}
                   onChange={(e) => setDashboardGrouping(e.target.value)}
-                  className="w-full px-3 py-2 bg-neu-bg border border-neu-shadow-light/30 rounded-lg text-neu-text focus:ring-2 focus:ring-neu-accent transition-colors"
+                  className="w-full px-3 py-2 bg-neu-bg border border-neu-border rounded-lg text-neu-text focus:ring-2 focus:ring-neu-accent transition-colors"
                 >
                   <option value="workflow">Group by Workflow</option>
                   <option value="date">Group by Date</option>
@@ -303,7 +303,7 @@ export default function SettingsPage() {
                 <select
                   value={defaultBottleneckTab}
                   onChange={(e) => setDefaultBottleneckTab(e.target.value)}
-                  className="w-full px-3 py-2 bg-neu-bg border border-neu-shadow-light/30 rounded-lg text-neu-text focus:ring-2 focus:ring-neu-accent transition-colors"
+                  className="w-full px-3 py-2 bg-neu-bg border border-neu-border rounded-lg text-neu-text focus:ring-2 focus:ring-neu-accent transition-colors"
                 >
                   <option value="all">All</option>
                   <option value="severe">Severe</option>
@@ -319,7 +319,7 @@ export default function SettingsPage() {
                   type="checkbox"
                   checked={showScoringExplanations}
                   onChange={(e) => setShowScoringExplanations(e.target.checked)}
-                  className="w-4 h-4 rounded border-neu-shadow-light/50 bg-neu-bg text-neu-accent focus:ring-neu-accent"
+                  className="w-4 h-4 rounded border-neu-border bg-neu-bg text-neu-accent focus:ring-neu-accent"
                 />
                 <span className="text-sm text-neu-text">Show scoring explanations by default</span>
               </label>
@@ -329,7 +329,7 @@ export default function SettingsPage() {
                   type="checkbox"
                   checked={autoExpandRecommendations}
                   onChange={(e) => setAutoExpandRecommendations(e.target.checked)}
-                  className="w-4 h-4 rounded border-neu-shadow-light/50 bg-neu-bg text-neu-accent focus:ring-neu-accent"
+                  className="w-4 h-4 rounded border-neu-border bg-neu-bg text-neu-accent focus:ring-neu-accent"
                 />
                 <span className="text-sm text-neu-text">Auto-expand recommendation categories</span>
               </label>
@@ -355,7 +355,7 @@ export default function SettingsPage() {
 
         {/* Data Management */}
         <section className="neu-raised overflow-hidden">
-          <div className="p-6 border-b border-neu-shadow-light/30">
+          <div className="p-6 border-b border-neu-border">
             <h2 className="font-display text-lg font-semibold text-neu-text flex items-center gap-2">
               <Database className="w-5 h-5 text-neu-green" />
               Data Management

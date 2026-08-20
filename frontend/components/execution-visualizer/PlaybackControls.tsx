@@ -17,12 +17,12 @@ interface PlaybackControlsProps {
 
 export function PlaybackControls({ state, controls, totalEvents }: PlaybackControlsProps) {
   return (
-    <div className="flex-shrink-0 border-t border-neu-shadow-light/30 bg-neu-bg px-4 py-3 neu-raised-sm">
+    <div className="flex-shrink-0 border-t border-neu-border bg-neu-bg px-4 py-3 neu-raised-sm">
       <div className="flex items-center gap-4">
         {/* Play/Pause Button */}
         <button
           onClick={state.isPlaying ? controls.pause : controls.play}
-          className="px-4 py-2 bg-neu-accent hover:bg-neu-accent-light text-neu-bg rounded-lg font-medium transition-all duration-200 flex items-center gap-2 shadow-neu-raised-sm hover:shadow-neu-raised disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 bg-neu-accent hover:bg-neu-accent-light text-neu-bg rounded-lg font-medium transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={state.currentEventIndex >= totalEvents}
         >
           {state.isPlaying ? (
@@ -45,7 +45,7 @@ export function PlaybackControls({ state, controls, totalEvents }: PlaybackContr
         {/* Reset Button */}
         <button
           onClick={controls.reset}
-          className="px-4 py-2 bg-neu-bg hover:bg-neu-shadow-light/20 text-neu-text-muted hover:text-neu-text rounded-lg font-medium transition-all duration-200 flex items-center gap-2 shadow-neu-raised-sm"
+          className="px-4 py-2 bg-neu-bg hover:bg-white/5 text-neu-text-muted hover:text-neu-text rounded-lg font-medium transition-all duration-200 flex items-center gap-2"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -62,7 +62,7 @@ export function PlaybackControls({ state, controls, totalEvents }: PlaybackContr
             id="speed-select"
             value={state.speed}
             onChange={(e) => controls.setSpeed(Number(e.target.value))}
-            className="px-3 py-2 bg-neu-bg border border-neu-shadow-light/30 rounded-lg text-sm text-neu-text focus:outline-none focus:ring-2 focus:ring-neu-accent shadow-neu-inset"
+            className="px-3 py-2 bg-neu-bg border border-neu-border rounded-lg text-sm text-neu-text focus:outline-none focus:ring-2 focus:ring-neu-accent"
           >
             <option value={0.5}>0.5x</option>
             <option value={1}>1x</option>
@@ -75,7 +75,7 @@ export function PlaybackControls({ state, controls, totalEvents }: PlaybackContr
         {/* Progress Bar and Info */}
         <div className="flex-1">
           {/* Progress Bar */}
-          <div className="h-2 bg-neu-shadow-dark rounded-full overflow-hidden shadow-neu-inset">
+          <div className="h-2 bg-neu-sidebar rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-neu-accent to-neu-accent-light transition-all duration-200"
               style={{ width: `${state.progress}%` }}

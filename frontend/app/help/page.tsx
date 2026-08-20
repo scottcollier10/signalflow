@@ -39,7 +39,7 @@ function AccordionItem({ title, icon, children, defaultOpen = false }: Accordion
     <div className="neu-raised overflow-hidden">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-4 hover:bg-neu-shadow-light/10 transition-colors"
+        className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors"
       >
         <div className="flex items-center gap-3">
           {icon}
@@ -52,7 +52,7 @@ function AccordionItem({ title, icon, children, defaultOpen = false }: Accordion
         )}
       </button>
       {isOpen && (
-        <div className="p-4 pt-0 border-t border-neu-shadow-light/20">
+        <div className="p-4 pt-0 border-t border-neu-border/50">
           <div className="pt-4">
             {children}
           </div>
@@ -150,32 +150,32 @@ export default function HelpPage() {
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
-                    <tr className="bg-neu-shadow-dark/30">
-                      <th className="border border-neu-shadow-light/30 p-2 text-left text-neu-text">Factor</th>
-                      <th className="border border-neu-shadow-light/30 p-2 text-left text-neu-text">Weight</th>
-                      <th className="border border-neu-shadow-light/30 p-2 text-left text-neu-text">Description</th>
+                    <tr className="bg-black/10">
+                      <th className="border border-neu-border p-2 text-left text-neu-text">Factor</th>
+                      <th className="border border-neu-border p-2 text-left text-neu-text">Weight</th>
+                      <th className="border border-neu-border p-2 text-left text-neu-text">Description</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td className="border border-neu-shadow-light/30 p-2 font-medium text-neu-text">Duration</td>
-                      <td className="border border-neu-shadow-light/30 p-2 text-neu-text-muted">40 points</td>
-                      <td className="border border-neu-shadow-light/30 p-2 text-neu-text-muted">Time taken relative to total workflow</td>
+                      <td className="border border-neu-border p-2 font-medium text-neu-text">Duration</td>
+                      <td className="border border-neu-border p-2 text-neu-text-muted">40 points</td>
+                      <td className="border border-neu-border p-2 text-neu-text-muted">Time taken relative to total workflow</td>
                     </tr>
                     <tr>
-                      <td className="border border-neu-shadow-light/30 p-2 font-medium text-neu-text">Position</td>
-                      <td className="border border-neu-shadow-light/30 p-2 text-neu-text-muted">30 points</td>
-                      <td className="border border-neu-shadow-light/30 p-2 text-neu-text-muted">Impact on critical path (max if on critical path)</td>
+                      <td className="border border-neu-border p-2 font-medium text-neu-text">Position</td>
+                      <td className="border border-neu-border p-2 text-neu-text-muted">30 points</td>
+                      <td className="border border-neu-border p-2 text-neu-text-muted">Impact on critical path (max if on critical path)</td>
                     </tr>
                     <tr>
-                      <td className="border border-neu-shadow-light/30 p-2 font-medium text-neu-text">Frequency</td>
-                      <td className="border border-neu-shadow-light/30 p-2 text-neu-text-muted">20 points</td>
-                      <td className="border border-neu-shadow-light/30 p-2 text-neu-text-muted">How consistently the node is slow</td>
+                      <td className="border border-neu-border p-2 font-medium text-neu-text">Frequency</td>
+                      <td className="border border-neu-border p-2 text-neu-text-muted">20 points</td>
+                      <td className="border border-neu-border p-2 text-neu-text-muted">How consistently the node is slow</td>
                     </tr>
                     <tr>
-                      <td className="border border-neu-shadow-light/30 p-2 font-medium text-neu-text">Variance</td>
-                      <td className="border border-neu-shadow-light/30 p-2 text-neu-text-muted">10 points</td>
-                      <td className="border border-neu-shadow-light/30 p-2 text-neu-text-muted">Performance predictability</td>
+                      <td className="border border-neu-border p-2 font-medium text-neu-text">Variance</td>
+                      <td className="border border-neu-border p-2 text-neu-text-muted">10 points</td>
+                      <td className="border border-neu-border p-2 text-neu-text-muted">Performance predictability</td>
                     </tr>
                   </tbody>
                 </table>
@@ -359,47 +359,47 @@ export default function HelpPage() {
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
-                    <tr className="bg-neu-shadow-dark/30">
-                      <th className="border border-neu-shadow-light/30 p-2 text-left text-neu-text">Shortcut</th>
-                      <th className="border border-neu-shadow-light/30 p-2 text-left text-neu-text">Action</th>
+                    <tr className="bg-black/10">
+                      <th className="border border-neu-border p-2 text-left text-neu-text">Shortcut</th>
+                      <th className="border border-neu-border p-2 text-left text-neu-text">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td className="border border-neu-shadow-light/30 p-2">
-                        <kbd className="px-2 py-1 bg-neu-shadow-dark/50 text-neu-text rounded text-xs">G</kbd>
+                      <td className="border border-neu-border p-2">
+                        <kbd className="px-2 py-1 bg-black/20 text-neu-text rounded text-xs">G</kbd>
                         {' then '}
-                        <kbd className="px-2 py-1 bg-neu-shadow-dark/50 text-neu-text rounded text-xs">D</kbd>
+                        <kbd className="px-2 py-1 bg-black/20 text-neu-text rounded text-xs">D</kbd>
                       </td>
-                      <td className="border border-neu-shadow-light/30 p-2 text-neu-text-muted">Go to Dashboard</td>
+                      <td className="border border-neu-border p-2 text-neu-text-muted">Go to Dashboard</td>
                     </tr>
                     <tr>
-                      <td className="border border-neu-shadow-light/30 p-2">
-                        <kbd className="px-2 py-1 bg-neu-shadow-dark/50 text-neu-text rounded text-xs">G</kbd>
+                      <td className="border border-neu-border p-2">
+                        <kbd className="px-2 py-1 bg-black/20 text-neu-text rounded text-xs">G</kbd>
                         {' then '}
-                        <kbd className="px-2 py-1 bg-neu-shadow-dark/50 text-neu-text rounded text-xs">I</kbd>
+                        <kbd className="px-2 py-1 bg-black/20 text-neu-text rounded text-xs">I</kbd>
                       </td>
-                      <td className="border border-neu-shadow-light/30 p-2 text-neu-text-muted">Go to Import</td>
+                      <td className="border border-neu-border p-2 text-neu-text-muted">Go to Import</td>
                     </tr>
                     <tr>
-                      <td className="border border-neu-shadow-light/30 p-2">
-                        <kbd className="px-2 py-1 bg-neu-shadow-dark/50 text-neu-text rounded text-xs">G</kbd>
+                      <td className="border border-neu-border p-2">
+                        <kbd className="px-2 py-1 bg-black/20 text-neu-text rounded text-xs">G</kbd>
                         {' then '}
-                        <kbd className="px-2 py-1 bg-neu-shadow-dark/50 text-neu-text rounded text-xs">S</kbd>
+                        <kbd className="px-2 py-1 bg-black/20 text-neu-text rounded text-xs">S</kbd>
                       </td>
-                      <td className="border border-neu-shadow-light/30 p-2 text-neu-text-muted">Go to Settings</td>
+                      <td className="border border-neu-border p-2 text-neu-text-muted">Go to Settings</td>
                     </tr>
                     <tr>
-                      <td className="border border-neu-shadow-light/30 p-2">
-                        <kbd className="px-2 py-1 bg-neu-shadow-dark/50 text-neu-text rounded text-xs">?</kbd>
+                      <td className="border border-neu-border p-2">
+                        <kbd className="px-2 py-1 bg-black/20 text-neu-text rounded text-xs">?</kbd>
                       </td>
-                      <td className="border border-neu-shadow-light/30 p-2 text-neu-text-muted">Show this help</td>
+                      <td className="border border-neu-border p-2 text-neu-text-muted">Show this help</td>
                     </tr>
                     <tr>
-                      <td className="border border-neu-shadow-light/30 p-2">
-                        <kbd className="px-2 py-1 bg-neu-shadow-dark/50 text-neu-text rounded text-xs">Esc</kbd>
+                      <td className="border border-neu-border p-2">
+                        <kbd className="px-2 py-1 bg-black/20 text-neu-text rounded text-xs">Esc</kbd>
                       </td>
-                      <td className="border border-neu-shadow-light/30 p-2 text-neu-text-muted">Close panels/modals</td>
+                      <td className="border border-neu-border p-2 text-neu-text-muted">Close panels/modals</td>
                     </tr>
                   </tbody>
                 </table>
@@ -458,7 +458,7 @@ export default function HelpPage() {
               href="https://docs.n8n.io"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 p-3 neu-raised rounded-lg hover:bg-neu-shadow-light/10 transition-colors"
+              className="flex items-center gap-2 p-3 neu-raised rounded-lg hover:bg-white/5 transition-colors"
             >
               <ExternalLink className="w-4 h-4 text-neu-text-muted" />
               <span className="text-neu-text">n8n Documentation</span>
@@ -467,7 +467,7 @@ export default function HelpPage() {
               href="https://community.n8n.io"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 p-3 neu-raised rounded-lg hover:bg-neu-shadow-light/10 transition-colors"
+              className="flex items-center gap-2 p-3 neu-raised rounded-lg hover:bg-white/5 transition-colors"
             >
               <ExternalLink className="w-4 h-4 text-neu-text-muted" />
               <span className="text-neu-text">n8n Community</span>

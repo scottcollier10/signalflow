@@ -96,7 +96,7 @@ export function ExecutionTabs({ activeTab, onTabChange, counts }: ExecutionTabsP
   ];
 
   return (
-    <div className="border-b border-neu-shadow-light/30">
+    <div className="border-b border-neu-border">
       <nav className="-mb-px flex overflow-x-auto scrollbar-hide" aria-label="Tabs">
         {tabs.map((tab) => (
           <button
@@ -106,7 +106,7 @@ export function ExecutionTabs({ activeTab, onTabChange, counts }: ExecutionTabsP
               'flex items-center gap-2 whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm transition-all duration-200',
               activeTab === tab.id
                 ? 'border-neu-accent text-neu-accent'
-                : 'border-transparent text-neu-text-muted hover:text-neu-text hover:border-neu-shadow-light/50'
+                : 'border-transparent text-neu-text-muted hover:text-neu-text hover:border-neu-border'
             )}
           >
             {tab.icon}
@@ -114,7 +114,7 @@ export function ExecutionTabs({ activeTab, onTabChange, counts }: ExecutionTabsP
             {tab.count !== undefined && (
               <span className={cn(
                 'px-2 py-0.5 rounded-full text-xs font-medium',
-                tab.countColor || 'bg-neu-shadow-light/30 text-neu-text-muted'
+                tab.countColor || 'bg-white/[0.08] text-neu-text-muted'
               )}>
                 {tab.count}
               </span>

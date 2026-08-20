@@ -2,7 +2,7 @@
 
 /**
  * Error Clusters Section component
- * Shows error analysis and clustering results with neumorphic design
+ * Shows error analysis and clustering results with flat dark theme
  */
 
 import { ErrorAnalysisResponse, ErrorCluster } from '@/lib/api/analysis';
@@ -123,7 +123,7 @@ function ErrorClusterCard({ cluster }: { cluster: ErrorCluster }) {
           </div>
 
           {cluster.sample_message && (
-            <div className="mt-2 p-3 bg-neu-shadow-dark/30 rounded border border-neu-shadow-light/20">
+            <div className="mt-2 p-3 bg-black/10 rounded border border-neu-border/50">
               <div className="text-xs text-neu-text-muted mb-1">Sample Message:</div>
               <code className="text-sm text-neu-coral font-mono break-all">
                 {cluster.sample_message}
@@ -210,7 +210,7 @@ function getPatternCounts(clusters: ErrorCluster[]) {
     rate_limit: { bgColor: 'bg-neu-orange/10', textColor: 'text-neu-orange' },
     network: { bgColor: 'bg-neu-teal/10', textColor: 'text-neu-teal' },
     validation: { bgColor: 'bg-neu-accent/10', textColor: 'text-neu-accent' },
-    unknown: { bgColor: 'bg-neu-shadow-light/10', textColor: 'text-neu-text-muted' },
+    unknown: { bgColor: 'bg-white/5', textColor: 'text-neu-text-muted' },
   };
 
   return Object.entries(counts).map(([pattern, count]) => ({

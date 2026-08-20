@@ -3,7 +3,7 @@
 /**
  * Evidence Drawer component
  * Slide-out panel showing recommendation details, evidence, and code examples
- * With neumorphic design
+ * With flat dark theme
  */
 
 import { useState } from 'react';
@@ -36,7 +36,7 @@ function getCategoryColors(category: string): string {
     performance: 'bg-neu-teal/15 text-neu-teal',
     reliability: 'bg-neu-accent/15 text-neu-accent',
     cost: 'bg-neu-green/15 text-neu-green',
-    maintainability: 'bg-neu-shadow-light/30 text-neu-text-muted',
+    maintainability: 'bg-white/[0.08] text-neu-text-muted',
   };
   return colors[category.toLowerCase()] || colors.maintainability;
 }
@@ -67,14 +67,14 @@ export function EvidenceDrawer({ open, recommendation, onClose }: EvidenceDrawer
       <div
         className={`
           fixed top-0 right-0 h-full w-full md:w-2/3 lg:w-1/2 xl:w-2/5
-          bg-neu-bg shadow-neu-raised z-50
+          bg-neu-bg z-50
           transform transition-transform duration-300 ease-in-out
           ${open ? 'translate-x-0' : 'translate-x-full'}
         `}
       >
         <div className="h-full overflow-y-auto">
           {/* Header */}
-          <div className="sticky top-0 bg-neu-bg border-b border-neu-shadow-light/30 px-6 py-4 z-10">
+          <div className="sticky top-0 bg-neu-bg border-b border-neu-border px-6 py-4 z-10">
             <div className="flex items-start justify-between">
               <div className="flex-1 pr-4">
                 <h2 className="font-display text-xl font-bold text-neu-text">
@@ -90,7 +90,7 @@ export function EvidenceDrawer({ open, recommendation, onClose }: EvidenceDrawer
                   <span className={`px-2 py-1 rounded text-xs font-medium ${getEffortColors(recommendation.effort)}`}>
                     {recommendation.effort} effort
                   </span>
-                  <span className="px-2 py-1 bg-neu-shadow-light/20 text-neu-text rounded text-xs font-medium">
+                  <span className="px-2 py-1 bg-white/5 text-neu-text rounded text-xs font-medium">
                     Priority: {recommendation.priority_score}/100
                   </span>
                 </div>
@@ -121,7 +121,7 @@ export function EvidenceDrawer({ open, recommendation, onClose }: EvidenceDrawer
               <h3 className="font-display font-semibold text-neu-accent mb-2">Expected Impact</h3>
               <p className="text-neu-text">{recommendation.impact_details}</p>
               {recommendation.time_saved_ms && (
-                <div className="mt-3 pt-3 border-t border-neu-shadow-light/30">
+                <div className="mt-3 pt-3 border-t border-neu-border">
                   <span className="text-sm text-neu-text-muted">
                     Potential time saved: <strong className="text-neu-green">{formatDuration(recommendation.time_saved_ms)}</strong>
                   </span>
@@ -161,7 +161,7 @@ export function EvidenceDrawer({ open, recommendation, onClose }: EvidenceDrawer
                   {recommendation.affected_node_ids.map((nodeId) => (
                     <span
                       key={nodeId}
-                      className="px-3 py-1 bg-neu-shadow-dark/30 text-neu-text-muted rounded-full text-sm font-mono"
+                      className="px-3 py-1 bg-black/10 text-neu-text-muted rounded-full text-sm font-mono"
                     >
                       {nodeId.slice(0, 8)}...
                     </span>
@@ -187,7 +187,7 @@ function EvidenceItem({ evidence }: { evidence: Evidence }) {
   return (
     <div className="neu-inset p-4">
       <div className="flex items-start gap-3">
-        <span className={`px-2 py-1 rounded text-xs font-medium ${typeColors[evidence.type] || 'bg-neu-shadow-light/30 text-neu-text-muted'}`}>
+        <span className={`px-2 py-1 rounded text-xs font-medium ${typeColors[evidence.type] || 'bg-white/[0.08] text-neu-text-muted'}`}>
           {evidence.type.replace('_', ' ')}
         </span>
         <div className="flex-1">
@@ -195,7 +195,7 @@ function EvidenceItem({ evidence }: { evidence: Evidence }) {
 
           {/* Evidence data */}
           {evidence.data && Object.keys(evidence.data).length > 0 && (
-            <div className="mt-2 p-2 bg-neu-shadow-dark/30 rounded border border-neu-shadow-light/20">
+            <div className="mt-2 p-2 bg-black/10 rounded border border-neu-border/50">
               <pre className="text-xs text-neu-text-muted overflow-x-auto">
                 {JSON.stringify(evidence.data, null, 2)}
               </pre>
@@ -241,7 +241,7 @@ function CodeExampleBlock({ code }: { code: string }) {
         className={`absolute top-2 right-2 px-3 py-1 text-sm rounded transition-colors z-10 ${
           copied
             ? 'bg-neu-green/20 text-neu-green'
-            : 'bg-neu-shadow-light/30 text-neu-text hover:bg-neu-shadow-light/50'
+            : 'bg-white/[0.08] text-neu-text hover:bg-white/10'
         }`}
       >
         {copied ? 'Copied!' : 'Copy'}

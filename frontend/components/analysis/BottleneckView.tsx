@@ -2,7 +2,7 @@
 
 /**
  * Bottleneck View component
- * Shows detailed bottleneck analysis with neumorphic design
+ * Shows detailed bottleneck analysis with flat dark theme
  */
 
 import { useState } from 'react';
@@ -83,7 +83,7 @@ export function BottleneckView({ data }: BottleneckViewProps) {
                          severity === 'medium' ? 'bg-yellow-500 text-white' :
                          'bg-neu-green text-white';
           } else {
-            colorStyles = severity === 'all' ? 'bg-neu-shadow-light/20 text-neu-text hover:bg-neu-shadow-light/30' :
+            colorStyles = severity === 'all' ? 'bg-white/5 text-neu-text hover:bg-white/10' :
                          severity === 'severe' ? 'bg-neu-coral/15 text-neu-coral hover:bg-neu-coral/25' :
                          severity === 'high' ? 'bg-neu-orange/15 text-neu-orange hover:bg-neu-orange/25' :
                          severity === 'medium' ? 'bg-yellow-500/15 text-yellow-400 hover:bg-yellow-500/25' :
@@ -98,7 +98,7 @@ export function BottleneckView({ data }: BottleneckViewProps) {
             >
               {severity.charAt(0).toUpperCase() + severity.slice(1)}
               <span className={`ml-2 px-1.5 py-0.5 rounded text-xs ${
-                isActive ? 'bg-white/20' : 'bg-neu-shadow-dark/30'
+                isActive ? 'bg-white/20' : 'bg-black/10'
               }`}>
                 {count}
               </span>
@@ -151,7 +151,7 @@ export function BottleneckView({ data }: BottleneckViewProps) {
                   <div className="text-neu-text-muted text-xs mt-1">Inconsistent execution times indicate problems</div>
                 </div>
               </div>
-              <div className="mt-3 pt-3 border-t border-neu-shadow-light/30">
+              <div className="mt-3 pt-3 border-t border-neu-border">
                 <div className="text-sm text-neu-text font-medium mb-2">Severity Thresholds:</div>
                 <div className="flex flex-wrap gap-2 text-xs">
                   <span className="px-2 py-1 bg-neu-coral/15 text-neu-coral rounded">Severe: 90-100</span>
@@ -220,7 +220,7 @@ export function BottleneckView({ data }: BottleneckViewProps) {
           <div className="overflow-x-auto">
             <table className="min-w-full">
               <thead>
-                <tr className="border-b border-neu-shadow-light/30">
+                <tr className="border-b border-neu-border">
                   <th className="py-3 px-4 text-left text-xs font-medium text-neu-text-muted uppercase">
                     Node
                   </th>
@@ -241,9 +241,9 @@ export function BottleneckView({ data }: BottleneckViewProps) {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neu-shadow-light/20">
+              <tbody className="divide-y divide-neu-border/50">
                 {filteredBottlenecks.slice(0, 10).map((bottleneck) => (
-                  <tr key={bottleneck.node_id} className="hover:bg-neu-shadow-light/10 transition-colors">
+                  <tr key={bottleneck.node_id} className="hover:bg-white/5 transition-colors">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-neu-text truncate max-w-[200px]">
@@ -326,13 +326,13 @@ function SeverityCard({
     high: 'text-neu-orange bg-neu-orange/10 border-neu-orange/30',
     medium: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
     low: 'text-neu-green bg-neu-green/10 border-neu-green/30',
-  }[severity] || 'text-neu-text bg-neu-shadow-light/20 border-neu-shadow-light/30';
+  }[severity] || 'text-neu-text bg-white/5 border-neu-border';
 
   return (
     <button
       onClick={onClick}
       className={`
-        ${colorClasses} border-2 rounded-neu-lg p-4 text-left w-full
+        ${colorClasses} border-2 rounded-xl p-4 text-left w-full
         transition-all hover:scale-105 cursor-pointer
         ${isActive ? 'ring-2 ring-offset-2 ring-offset-neu-bg ring-neu-accent scale-105' : ''}
       `}
@@ -377,7 +377,7 @@ function BottleneckCard({ bottleneck }: { bottleneck: Bottleneck }) {
         </div>
 
         {/* Score bar */}
-        <div className="bg-neu-shadow-dark/30 rounded-full h-2">
+        <div className="bg-black/10 rounded-full h-2">
           <div
             className={`h-2 rounded-full ${
               bottleneck.severity === 'severe' ? 'bg-neu-coral' :
@@ -391,7 +391,7 @@ function BottleneckCard({ bottleneck }: { bottleneck: Bottleneck }) {
       </div>
 
       {bottleneck.is_on_critical_path && (
-        <div className="mt-3 pt-3 border-t border-neu-shadow-light/30">
+        <div className="mt-3 pt-3 border-t border-neu-border">
           <span className="badge-error text-xs">
             On Critical Path
           </span>
