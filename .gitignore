@@ -33,6 +33,12 @@ out/
 *.swp
 *.swo
 
+# Local tooling (Claude Code, Serena, Playwright MCP)
+.claude/
+.serena/
+.playwright-mcp/
+.project-context.md
+
 # OS
 .DS_Store
 Thumbs.db

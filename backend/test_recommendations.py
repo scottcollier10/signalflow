@@ -24,6 +24,7 @@ from src.analysis.recommendations import (
 )
 from unittest.mock import Mock, AsyncMock
 import asyncio
+import pytest
 
 
 class MockSupabaseClient:
@@ -316,6 +317,7 @@ def create_mock_data():
     }
 
 
+@pytest.mark.asyncio
 async def test_recommendation_engine():
     """Test the recommendation engine with mock data"""
 
@@ -433,6 +435,7 @@ async def test_recommendation_engine():
     return True
 
 
+@pytest.mark.asyncio
 async def test_priority_score_calculation():
     """Test priority score calculation logic.
 

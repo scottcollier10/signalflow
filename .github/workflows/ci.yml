@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt
+
+      - name: Run credential-free test suite
+        working-directory: backend
+        run: |
+          python -m pytest \
+            test_normalizer.py \
+            test_parser_continue_on_fail.py \
+            test_recommendations.py \
+            test_recommendation_data_loading.py \
+            test_rule_field_alignment.py \
+            test_bottleneck_node_metadata.py \
+            test_api_errors.py \
+            test_comparison_logic.py \
+            test_cluster_replacement.py \
+            test_dashboard_load_perf.py \
+            test_embedding_dedup.py \
+            test_error_embedder_lazy.py \
+            test_http1_supabase_client.py \
+            test_parallel_similarity.py \
+            -v --tb=short
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: TypeScript check
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Production build
+        working-directory: frontend
+        run: npm run build
