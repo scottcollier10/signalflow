@@ -370,7 +370,7 @@ export default function ImportPage() {
                   ? 'border-neu-accent bg-neu-accent/10'
                   : selectedFile
                     ? 'border-neu-green bg-neu-green/10'
-                    : 'border-neu-shadow-light/50 hover:border-neu-accent/50 hover:bg-neu-shadow-light/10'
+                    : 'border-neu-border hover:border-neu-accent/50 hover:bg-white/5'
                 }
               `}
             >
@@ -417,7 +417,7 @@ export default function ImportPage() {
                 value={jsonText}
                 onChange={(e) => { setJsonText(e.target.value); setError(null); }}
                 placeholder='{"data":{"resultData":{"runData":...}}}'
-                className="w-full h-64 p-4 bg-neu-bg border border-neu-shadow-light/30 rounded-lg font-mono text-sm text-neu-text resize-none focus:ring-2 focus:ring-neu-accent focus:border-neu-accent transition-colors placeholder:text-neu-text-muted/50"
+                className="w-full h-64 p-4 bg-neu-bg border border-neu-border rounded-lg font-mono text-sm text-neu-text resize-none focus:ring-2 focus:ring-neu-accent focus:border-neu-accent transition-colors placeholder:text-neu-text-muted/50"
               />
               <p className="mt-2 text-xs text-neu-text-muted">
                 Paste the full n8n execution JSON export
@@ -438,7 +438,7 @@ export default function ImportPage() {
                   value={n8nUrl}
                   onChange={(e) => handleN8nUrlChange(e.target.value)}
                   placeholder="https://n8n-jobbot.onrender.com"
-                  className="w-full px-4 py-2 bg-neu-bg border border-neu-shadow-light/30 rounded-lg text-sm text-neu-text focus:ring-2 focus:ring-neu-accent focus:border-neu-accent transition-colors placeholder:text-neu-text-muted/50"
+                  className="w-full px-4 py-2 bg-neu-bg border border-neu-border rounded-lg text-sm text-neu-text focus:ring-2 focus:ring-neu-accent focus:border-neu-accent transition-colors placeholder:text-neu-text-muted/50"
                 />
               </div>
 
@@ -452,7 +452,7 @@ export default function ImportPage() {
                   value={n8nExecutionId}
                   onChange={(e) => { setN8nExecutionId(e.target.value); setError(null); }}
                   placeholder="4350"
-                  className="w-full px-4 py-2 bg-neu-bg border border-neu-shadow-light/30 rounded-lg text-sm text-neu-text focus:ring-2 focus:ring-neu-accent focus:border-neu-accent transition-colors placeholder:text-neu-text-muted/50"
+                  className="w-full px-4 py-2 bg-neu-bg border border-neu-border rounded-lg text-sm text-neu-text focus:ring-2 focus:ring-neu-accent focus:border-neu-accent transition-colors placeholder:text-neu-text-muted/50"
                 />
                 <p className="mt-1 text-xs text-neu-text-muted">
                   Find this in the execution URL: /executions/<strong className="text-neu-accent">4350</strong>
@@ -470,7 +470,7 @@ export default function ImportPage() {
                     value={n8nApiKey}
                     onChange={(e) => handleApiKeyChange(e.target.value)}
                     placeholder="n8n_api_..."
-                    className="w-full px-4 py-2 pr-10 bg-neu-bg border border-neu-shadow-light/30 rounded-lg text-sm text-neu-text focus:ring-2 focus:ring-neu-accent focus:border-neu-accent transition-colors placeholder:text-neu-text-muted/50"
+                    className="w-full px-4 py-2 pr-10 bg-neu-bg border border-neu-border rounded-lg text-sm text-neu-text focus:ring-2 focus:ring-neu-accent focus:border-neu-accent transition-colors placeholder:text-neu-text-muted/50"
                   />
                   <button
                     type="button"
@@ -558,7 +558,7 @@ export default function ImportPage() {
                 className={`
                   flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2
                   ${isLoading || result
-                    ? 'bg-neu-shadow-light/30 text-neu-text-muted cursor-not-allowed'
+                    ? 'bg-white/[0.08] text-neu-text-muted cursor-not-allowed'
                     : 'btn-primary'
                   }
                 `}
@@ -589,7 +589,7 @@ export default function ImportPage() {
                 className={`
                   flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2
                   ${isLoading || result
-                    ? 'bg-neu-shadow-light/30 text-neu-text-muted cursor-not-allowed'
+                    ? 'bg-white/[0.08] text-neu-text-muted cursor-not-allowed'
                     : 'btn-primary'
                   }
                 `}
@@ -623,7 +623,7 @@ export default function ImportPage() {
                     setN8nExecutionId('');
                   }
                 }}
-                className="py-3 px-4 rounded-lg font-medium text-neu-text-muted bg-neu-shadow-light/20 hover:bg-neu-shadow-light/30 transition-colors"
+                className="py-3 px-4 rounded-lg font-medium text-neu-text-muted bg-white/5 hover:bg-white/10 transition-colors"
               >
                 Clear
               </button>
@@ -712,7 +712,7 @@ export default function ImportPage() {
                   {/* macOS */}
                   <div className="mb-3">
                     <p className="text-xs font-semibold text-neu-accent mb-1">macOS</p>
-                    <pre className="bg-neu-shadow-dark p-3 rounded-lg overflow-x-auto text-xs font-mono whitespace-pre-wrap">
+                    <pre className="bg-neu-sidebar p-3 rounded-lg overflow-x-auto text-xs font-mono whitespace-pre-wrap">
 {`curl -sS \\
   -H "X-N8N-API-KEY: YOUR_KEY_HERE" \\
   "https://<your-n8n-domain>/api/v1/executions/<execution-id>?includeData=true" \\
@@ -723,7 +723,7 @@ export default function ImportPage() {
                   {/* Windows */}
                   <div className="mb-3">
                     <p className="text-xs font-semibold text-neu-accent mb-1">Windows PowerShell</p>
-                    <pre className="bg-neu-shadow-dark p-3 rounded-lg overflow-x-auto text-xs font-mono whitespace-pre-wrap">
+                    <pre className="bg-neu-sidebar p-3 rounded-lg overflow-x-auto text-xs font-mono whitespace-pre-wrap">
 {`(Invoke-RestMethod \`
   -Headers @{"X-N8N-API-KEY"="YOUR_KEY_HERE"} \`
   -Uri "https://<your-n8n-domain>/api/v1/executions/<execution-id>?includeData=true") \`
@@ -735,7 +735,7 @@ export default function ImportPage() {
                   {/* Linux */}
                   <div>
                     <p className="text-xs font-semibold text-neu-accent mb-1">Linux (most desktops)</p>
-                    <pre className="bg-neu-shadow-dark p-3 rounded-lg overflow-x-auto text-xs font-mono whitespace-pre-wrap">
+                    <pre className="bg-neu-sidebar p-3 rounded-lg overflow-x-auto text-xs font-mono whitespace-pre-wrap">
 {`curl -sS \\
   -H "X-N8N-API-KEY: YOUR_KEY_HERE" \\
   "https://<your-n8n-domain>/api/v1/executions/<execution-id>?includeData=true" \\

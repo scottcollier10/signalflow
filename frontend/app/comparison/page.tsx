@@ -104,7 +104,7 @@ function getVerdictStyle(verdict: string): { bg: string; border: string; text: s
     case 'good_progress':
     case 'good_improvement':
       return {
-        bg: 'linear-gradient(135deg, rgba(77, 201, 176, 0.15) 0%, rgba(94, 212, 160, 0.25) 100%)',
+        bg: 'linear-gradient(135deg, rgba(45, 138, 123, 0.15) 0%, rgba(34, 197, 94, 0.25) 100%)',
         border: 'border-neu-teal/30',
         text: 'text-neu-teal',
         icon: '✨',
@@ -113,7 +113,7 @@ function getVerdictStyle(verdict: string): { bg: string; border: string; text: s
     case 'good_improvement_with_concerns':
       // Orange - positive but with caution
       return {
-        bg: 'linear-gradient(135deg, rgba(240, 149, 106, 0.15) 0%, rgba(251, 191, 36, 0.2) 100%)',
+        bg: 'linear-gradient(135deg, rgba(232, 90, 44, 0.15) 0%, rgba(234, 179, 8, 0.2) 100%)',
         border: 'border-neu-orange/40',
         text: 'text-neu-orange',
         icon: '⚡',
@@ -122,7 +122,7 @@ function getVerdictStyle(verdict: string): { bg: string; border: string; text: s
     case 'mixed_results':
       // Yellow - caution, investigate
       return {
-        bg: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(250, 204, 21, 0.2) 100%)',
+        bg: 'linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(234, 179, 8, 0.2) 100%)',
         border: 'border-yellow-500/30',
         text: 'text-yellow-400',
         icon: '⚖️',
@@ -131,7 +131,7 @@ function getVerdictStyle(verdict: string): { bg: string; border: string; text: s
     case 'some_improvement':
     case 'moderate_improvement':
       return {
-        bg: 'linear-gradient(135deg, rgba(168, 155, 224, 0.1) 0%, rgba(196, 184, 240, 0.2) 100%)',
+        bg: 'linear-gradient(135deg, rgba(139, 126, 200, 0.1) 0%, rgba(168, 155, 224, 0.2) 100%)',
         border: 'border-neu-accent/30',
         text: 'text-neu-accent',
         icon: '📈',
@@ -139,7 +139,7 @@ function getVerdictStyle(verdict: string): { bg: string; border: string; text: s
       };
     case 'minimal_change':
       return {
-        bg: 'linear-gradient(135deg, rgba(154, 158, 176, 0.1) 0%, rgba(154, 158, 176, 0.15) 100%)',
+        bg: 'linear-gradient(135deg, rgba(136, 136, 136, 0.1) 0%, rgba(136, 136, 136, 0.15) 100%)',
         border: 'border-neu-text-muted/30',
         text: 'text-neu-text-muted',
         icon: '➖',
@@ -148,7 +148,7 @@ function getVerdictStyle(verdict: string): { bg: string; border: string; text: s
     case 'regression':
     case 'needs_work':
       return {
-        bg: 'linear-gradient(135deg, rgba(240, 139, 122, 0.15) 0%, rgba(240, 149, 106, 0.25) 100%)',
+        bg: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(232, 90, 44, 0.25) 100%)',
         border: 'border-neu-coral/30',
         text: 'text-neu-coral',
         icon: '⚠️',
@@ -156,7 +156,7 @@ function getVerdictStyle(verdict: string): { bg: string; border: string; text: s
       };
     default:
       return {
-        bg: 'linear-gradient(135deg, rgba(154, 158, 176, 0.1) 0%, rgba(154, 158, 176, 0.15) 100%)',
+        bg: 'linear-gradient(135deg, rgba(136, 136, 136, 0.1) 0%, rgba(136, 136, 136, 0.15) 100%)',
         border: 'border-neu-text-muted/30',
         text: 'text-neu-text-muted',
         icon: '📊',
@@ -172,27 +172,27 @@ function LoadingSkeleton() {
       {/* Timeline skeleton */}
       <div className="neu-flat p-6">
         <div className="space-y-4">
-          <div className="h-8 bg-neu-shadow-light/30 rounded-lg w-full" />
-          <div className="h-8 bg-neu-shadow-light/30 rounded-lg w-1/4" />
+          <div className="h-8 bg-white/[0.08] rounded-lg w-full" />
+          <div className="h-8 bg-white/[0.08] rounded-lg w-1/4" />
         </div>
       </div>
 
       {/* Cards skeleton */}
       <div className="grid grid-cols-2 gap-6">
         <div className="neu-flat p-6 h-64">
-          <div className="h-6 bg-neu-shadow-light/30 rounded w-20 mb-6" />
-          <div className="h-16 bg-neu-shadow-light/30 rounded w-32 mb-8" />
+          <div className="h-6 bg-white/[0.08] rounded w-20 mb-6" />
+          <div className="h-16 bg-white/[0.08] rounded w-32 mb-8" />
           <div className="space-y-3">
-            <div className="h-4 bg-neu-shadow-light/30 rounded w-full" />
-            <div className="h-4 bg-neu-shadow-light/30 rounded w-full" />
+            <div className="h-4 bg-white/[0.08] rounded w-full" />
+            <div className="h-4 bg-white/[0.08] rounded w-full" />
           </div>
         </div>
         <div className="neu-flat p-6 h-64">
-          <div className="h-6 bg-neu-shadow-light/30 rounded w-20 mb-6" />
-          <div className="h-16 bg-neu-shadow-light/30 rounded w-32 mb-8" />
+          <div className="h-6 bg-white/[0.08] rounded w-20 mb-6" />
+          <div className="h-16 bg-white/[0.08] rounded w-32 mb-8" />
           <div className="space-y-3">
-            <div className="h-4 bg-neu-shadow-light/30 rounded w-full" />
-            <div className="h-4 bg-neu-shadow-light/30 rounded w-full" />
+            <div className="h-4 bg-white/[0.08] rounded w-full" />
+            <div className="h-4 bg-white/[0.08] rounded w-full" />
           </div>
         </div>
       </div>
@@ -357,7 +357,7 @@ function ComparisonContent() {
                 className="h-full rounded-lg"
                 style={{
                   width: '100%',
-                  background: 'linear-gradient(90deg, #f08b7a 0%, #f0956a 100%)',
+                  background: 'linear-gradient(90deg, #ef4444 0%, #e85a2c 100%)',
                 }}
               />
             </div>
@@ -374,7 +374,7 @@ function ComparisonContent() {
                 className="h-full rounded-lg"
                 style={{
                   width: `${afterWidth}%`,
-                  background: 'linear-gradient(90deg, #4dc9b0 0%, #5ed4a0 100%)',
+                  background: 'linear-gradient(90deg, #2d8a7b 0%, #22c55e 100%)',
                 }}
               />
             </div>

@@ -25,7 +25,7 @@ export function ExecutionNode({ data }: ExecutionNodeProps) {
       case 'error':
         return 'border-neu-coral bg-neu-coral/10';
       default:
-        return 'border-neu-shadow-light bg-neu-bg';
+        return 'border-neu-border bg-neu-bg';
     }
   };
 
@@ -53,7 +53,7 @@ export function ExecutionNode({ data }: ExecutionNodeProps) {
   };
 
   return (
-    <div className={`px-4 py-3 rounded-xl border-2 min-w-[180px] transition-all shadow-neu-raised-sm ${getNodeStyle()}`}>
+    <div className={`px-4 py-3 rounded-xl border-2 min-w-[180px] transition-all ${getNodeStyle()}`}>
       <Handle
         type="target"
         position={Position.Top}

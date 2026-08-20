@@ -103,8 +103,8 @@ export function NodeDetailPanel({
     },
     low: {
       color: 'text-neu-text-muted',
-      bgColor: 'bg-neu-shadow-light/10',
-      borderColor: 'border-neu-shadow-light/30'
+      bgColor: 'bg-white/5',
+      borderColor: 'border-neu-border'
     }
   };
 
@@ -118,9 +118,9 @@ export function NodeDetailPanel({
   const varianceScore = bottleneck ? Math.round(bottleneck.factors.variance_factor * 10) : 0;
 
   return (
-    <div className="absolute top-0 right-0 h-full w-96 bg-neu-bg shadow-2xl border-l border-neu-shadow-light/30 z-20 flex flex-col animate-slide-in">
+    <div className="absolute top-0 right-0 h-full w-96 bg-neu-bg border-l border-neu-border z-20 flex flex-col animate-slide-in">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-neu-shadow-light/30 neu-raised-sm">
+      <div className="flex items-center justify-between p-4 border-b border-neu-border neu-raised-sm">
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-lg truncate text-neu-text">
             {node.data?.label || node.id}
@@ -131,7 +131,7 @@ export function NodeDetailPanel({
         </div>
         <button
           onClick={onClose}
-          className="p-2 hover:bg-neu-shadow-light/20 rounded-lg transition-colors ml-2 flex-shrink-0 text-neu-text-muted hover:text-neu-text"
+          className="p-2 hover:bg-white/5 rounded-lg transition-colors ml-2 flex-shrink-0 text-neu-text-muted hover:text-neu-text"
           aria-label="Close panel"
         >
           <X className="w-5 h-5" />
@@ -143,7 +143,7 @@ export function NodeDetailPanel({
 
         {/* Duration */}
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-neu-shadow-light/20 rounded-lg">
+          <div className="p-2 bg-white/5 rounded-lg">
             <Clock className="w-5 h-5 text-neu-text-muted" />
           </div>
           <div>
@@ -205,7 +205,7 @@ export function NodeDetailPanel({
             )}
 
             {/* Total duration context */}
-            <div className="mt-3 pt-3 border-t border-neu-shadow-light/20 text-sm text-neu-text-muted">
+            <div className="mt-3 pt-3 border-t border-neu-border/50 text-sm text-neu-text-muted">
               Total node time: {formatDuration(bottleneck.total_duration_ms)}
             </div>
           </div>
@@ -230,7 +230,7 @@ export function NodeDetailPanel({
             </h4>
             <div className="space-y-3">
               {recommendations.map((rec, index) => (
-                <div key={rec.id || index} className="rounded-xl border border-neu-shadow-light/30 p-3 bg-neu-shadow-dark/30 hover:bg-neu-shadow-light/10 transition-colors">
+                <div key={rec.id || index} className="rounded-xl border border-neu-border p-3 bg-black/10 hover:bg-white/5 transition-colors">
                   <div className="font-medium text-sm text-neu-text">{rec.title}</div>
                   <p className="text-xs text-neu-text-muted mt-1 line-clamp-2">{rec.description}</p>
                   <div className="flex items-center gap-2 mt-2">
@@ -243,7 +243,7 @@ export function NodeDetailPanel({
                       rec.impact === 'CRITICAL' ? 'bg-neu-coral/10 text-neu-coral' :
                       rec.impact === 'HIGH' ? 'bg-neu-orange/10 text-neu-orange' :
                       rec.impact === 'MEDIUM' ? 'bg-neu-yellow/10 text-neu-yellow' :
-                      'bg-neu-shadow-light/20 text-neu-text-muted'
+                      'bg-white/5 text-neu-text-muted'
                     }`}>
                       {rec.impact}
                     </span>
@@ -255,7 +255,7 @@ export function NodeDetailPanel({
         )}
 
         {recommendations.length === 0 && bottleneck && (
-          <div className="text-sm text-neu-text-muted bg-neu-shadow-dark/30 rounded-xl p-3 border border-neu-shadow-light/20">
+          <div className="text-sm text-neu-text-muted bg-black/10 rounded-xl p-3 border border-neu-border/50">
             No specific recommendations for this node.
             Check the Recommendations tab for workflow-wide suggestions.
           </div>
@@ -263,12 +263,12 @@ export function NodeDetailPanel({
       </div>
 
       {/* Footer - Action Buttons */}
-      <div className="p-4 border-t border-neu-shadow-light/30 neu-raised-sm space-y-2">
+      <div className="p-4 border-t border-neu-border neu-raised-sm space-y-2">
         {/* Primary: Copy Fix Prompt (only for bottleneck nodes) */}
         {bottleneck && (
           <button
             onClick={handleCopyPrompt}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-neu-accent hover:bg-neu-accent-light text-neu-bg rounded-xl font-medium transition-colors shadow-neu-raised-sm"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-neu-accent hover:bg-neu-accent-light text-neu-bg rounded-xl font-medium transition-colors"
           >
             {copied ? (
               <>
@@ -287,7 +287,7 @@ export function NodeDetailPanel({
         {/* Secondary: Copy Node Config */}
         <button
           onClick={handleCopyNodeConfig}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-neu-shadow-light/30 hover:bg-neu-shadow-light/10 text-neu-text-muted hover:text-neu-text rounded-xl text-sm transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-neu-border hover:bg-white/5 text-neu-text-muted hover:text-neu-text rounded-xl text-sm transition-colors"
         >
           {configCopied ? (
             <>
@@ -331,7 +331,7 @@ function ScoreBar({
       case 'severe': return 'bg-neu-coral';
       case 'high': return 'bg-neu-orange';
       case 'medium': return 'bg-neu-yellow';
-      default: return 'bg-neu-shadow-light';
+      default: return 'bg-neu-border';
     }
   };
 
@@ -350,7 +350,7 @@ function ScoreBar({
         <span className="text-neu-text-muted">{label}</span>
         <span className={`font-medium ${getTextColor()}`}>{score}/{maxScore}</span>
       </div>
-      <div className="w-full bg-neu-shadow-dark rounded-full h-2 overflow-hidden">
+      <div className="w-full bg-neu-sidebar rounded-full h-2 overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-300 ${getBarColor()}`}
           style={{ width: `${percentage}%` }}

@@ -95,11 +95,11 @@ function SeverityLegend() {
           <span className="text-neu-text-muted">Medium (50-69)</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-neu-shadow-light" />
+          <div className="w-4 h-4 rounded bg-neu-border" />
           <span className="text-neu-text-muted">Low (0-49)</span>
         </div>
       </div>
-      <div className="mt-3 pt-2 border-t border-neu-shadow-light/30 text-xs text-neu-text-muted">
+      <div className="mt-3 pt-2 border-t border-neu-border text-xs text-neu-text-muted">
         Click any node to see details
       </div>
     </div>

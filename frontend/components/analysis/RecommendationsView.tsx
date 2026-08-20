@@ -2,7 +2,7 @@
 
 /**
  * Recommendations View component
- * Shows filterable and sortable list of recommendations with neumorphic design
+ * Shows filterable and sortable list of recommendations with flat dark theme
  * Supports both list and grouped-by-category views
  * Includes export functionality for Claude Code prompt generation
  */
@@ -427,7 +427,7 @@ export function RecommendationsView({
         <div className="relative">
           <button
             onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
-            className="flex items-center gap-2 px-6 py-3 bg-neu-orange text-neu-bg rounded-neu text-sm font-semibold shadow-neu-raised-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-neu-raised"
+            className="flex items-center gap-2 px-6 py-3 bg-neu-orange text-neu-bg rounded-lg text-sm font-semibold transition-all duration-300 hover:-translate-y-0.5"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
               <path d="M1 4v6h6M23 20v-6h-6" />
@@ -449,7 +449,7 @@ export function RecommendationsView({
 
               <div className="absolute right-0 mt-2 w-80 neu-raised rounded-lg z-20 overflow-hidden">
                 {/* Claude Code Section */}
-                <div className="p-4 bg-gradient-to-r from-neu-accent/10 to-neu-accent-light/10 border-b border-neu-shadow-light/30">
+                <div className="p-4 bg-gradient-to-r from-neu-accent/10 to-neu-accent-light/10 border-b border-neu-border">
                   <div className="flex items-start gap-3 mb-3">
                     <span className="text-2xl">🤖</span>
                     <div>
@@ -463,7 +463,7 @@ export function RecommendationsView({
                     <button
                       onClick={handleCopyPrompt}
                       disabled={!isExportReady}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 neu-flat rounded-lg text-sm font-medium text-neu-text hover:bg-neu-shadow-light/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 neu-flat rounded-lg text-sm font-medium text-neu-text hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -473,7 +473,7 @@ export function RecommendationsView({
                     <button
                       onClick={handleDownloadPrompt}
                       disabled={!isExportReady}
-                      className="flex items-center justify-center gap-2 px-3 py-2 neu-flat rounded-lg text-sm font-medium text-neu-text hover:bg-neu-shadow-light/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="flex items-center justify-center gap-2 px-3 py-2 neu-flat rounded-lg text-sm font-medium text-neu-text hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       title="Download as Markdown"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -491,11 +491,11 @@ export function RecommendationsView({
                 </div>
 
                 {/* Workflow JSON Download */}
-                <div className="p-2 border-t border-neu-shadow-light/30">
+                <div className="p-2 border-t border-neu-border">
                   <button
                     onClick={handleDownloadWorkflowJSON}
                     disabled={workflowJSONLoading || !exportData?.workflowId}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-left text-sm rounded-lg hover:bg-neu-shadow-light/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="w-full flex items-center gap-3 px-3 py-2 text-left text-sm rounded-lg hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <span className="text-lg">📦</span>
                     <div className="flex-1">
@@ -510,14 +510,14 @@ export function RecommendationsView({
                 </div>
 
                 {/* Other Export Options */}
-                <div className="p-2 border-t border-neu-shadow-light/20">
+                <div className="p-2 border-t border-neu-border/50">
                   <button
                     disabled
                     className="w-full flex items-center gap-3 px-3 py-2 text-left text-sm text-neu-text-muted rounded-lg cursor-not-allowed"
                   >
                     <span>📄</span>
                     <span>Export as PDF</span>
-                    <span className="ml-auto text-xs bg-neu-shadow-dark/30 px-2 py-0.5 rounded">Coming soon</span>
+                    <span className="ml-auto text-xs bg-black/10 px-2 py-0.5 rounded">Coming soon</span>
                   </button>
                   <button
                     disabled
@@ -525,7 +525,7 @@ export function RecommendationsView({
                   >
                     <span>📊</span>
                     <span>Export as CSV</span>
-                    <span className="ml-auto text-xs bg-neu-shadow-dark/30 px-2 py-0.5 rounded">Coming soon</span>
+                    <span className="ml-auto text-xs bg-black/10 px-2 py-0.5 rounded">Coming soon</span>
                   </button>
                 </div>
               </div>
@@ -559,7 +559,7 @@ export function RecommendationsView({
                   {/* Category Header */}
                   <button
                     onClick={() => toggleCategory(key)}
-                    className="w-full px-6 py-4 flex items-center justify-between hover:bg-neu-shadow-light/5 transition-all"
+                    className="w-full px-6 py-4 flex items-center justify-between hover:bg-white/[0.02] transition-all"
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-lg bg-${colorClass}/20 text-${colorClass} flex items-center justify-center`}>
@@ -594,7 +594,7 @@ export function RecommendationsView({
 
                   {/* Category Recommendations */}
                   {isExpanded && (
-                    <div className="divide-y divide-neu-shadow-light/20">
+                    <div className="divide-y divide-neu-border/50">
                       {categoryRecs.map((rec) => (
                         <RecommendationCard
                           key={rec.id}
@@ -665,7 +665,7 @@ function getCategoryColors(category: string): string {
     performance: 'bg-neu-teal/15 text-neu-teal',
     reliability: 'bg-neu-accent/15 text-neu-accent',
     cost: 'bg-neu-green/15 text-neu-green',
-    maintainability: 'bg-neu-shadow-light/30 text-neu-text-muted',
+    maintainability: 'bg-white/[0.08] text-neu-text-muted',
   };
   return colors[category.toLowerCase()] || colors.maintainability;
 }
@@ -691,7 +691,7 @@ function RecommendationCard({
   if (compact) {
     return (
       <div
-        className="px-6 py-4 cursor-pointer hover:bg-neu-shadow-light/5 transition-colors"
+        className="px-6 py-4 cursor-pointer hover:bg-white/[0.02] transition-colors"
         onClick={onClick}
       >
         <div className="flex items-center justify-between gap-4">
@@ -804,7 +804,7 @@ function RecommendationCard({
 
       {/* Affected nodes */}
       {recommendation.affected_node_ids && recommendation.affected_node_ids.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-neu-shadow-light/20">
+        <div className="mt-4 pt-4 border-t border-neu-border/50">
           <span className="text-xs text-neu-text-muted">
             Affects {recommendation.affected_node_ids.length} node{recommendation.affected_node_ids.length !== 1 ? 's' : ''}
           </span>

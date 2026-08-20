@@ -97,7 +97,7 @@ export function StepProgress({ className = '', executionCount }: StepProgressPro
                     ? 'bg-gradient-to-br from-neu-green to-neu-teal text-white'
                     : isActive
                     ? 'bg-gradient-to-br from-neu-accent to-neu-accent-light text-white'
-                    : 'bg-neu-shadow-light text-neu-text-muted'
+                    : 'bg-neu-border text-neu-text-muted'
                 }`}
               >
                 {isCompleted ? (

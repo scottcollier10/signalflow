@@ -219,7 +219,7 @@ export default function ExecutionPage({ params }: ExecutionPageProps) {
         {/* Header */}
         <div className="neu-raised mb-6">
           {/* Breadcrumb */}
-          <div className="px-6 py-3 border-b border-neu-shadow-light/30">
+          <div className="px-6 py-3 border-b border-neu-border">
             <button
               onClick={() => router.back()}
               className="inline-flex items-center gap-2 text-sm text-neu-text-muted hover:text-neu-accent transition-colors"
@@ -259,7 +259,7 @@ export default function ExecutionPage({ params }: ExecutionPageProps) {
                       {(executionMeta.duration_ms / 1000).toFixed(2)}s
                     </span>
                   )}
-                  <span className="font-mono text-xs bg-neu-shadow-dark/30 px-2 py-0.5 rounded">
+                  <span className="font-mono text-xs bg-black/10 px-2 py-0.5 rounded">
                     {executionId.slice(0, 8)}...
                   </span>
                 </div>

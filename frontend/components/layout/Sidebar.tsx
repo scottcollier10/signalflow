@@ -119,13 +119,13 @@ export function Sidebar() {
         `}
       >
         {/* Logo/Brand */}
-        <div className={`flex items-center h-16 px-4 border-b border-neu-shadow-light/30 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+        <div className={`flex items-center h-16 px-4 border-b border-neu-border ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
           {isCollapsed ? (
             // Collapsed: Show only logo icon that toggles sidebar
             <button
               onClick={toggleCollapsed}
               className="w-10 h-10 rounded-lg flex items-center justify-center hover:scale-105 transition-transform"
-              style={{ background: 'linear-gradient(145deg, #b5a8e8, #9b8bd8)' }}
+              style={{ background: '#8b7ec8' }}
               aria-label="Expand sidebar"
             >
               <svg className="w-6 h-6 text-neu-bg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -137,7 +137,7 @@ export function Sidebar() {
               <Link href="/dashboard" className="flex items-center gap-2">
                 <div
                   className="w-8 h-8 rounded-lg flex items-center justify-center"
-                  style={{ background: 'linear-gradient(145deg, #b5a8e8, #9b8bd8)' }}
+                  style={{ background: '#8b7ec8' }}
                 >
                   <svg className="w-5 h-5 text-neu-bg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -169,8 +169,8 @@ export function Sidebar() {
               className={`
                 flex items-center rounded-lg transition-all duration-200
                 ${isActive(item.href)
-                  ? 'bg-neu-accent/10 text-neu-accent shadow-neu-raised-sm'
-                  : 'text-neu-text-muted hover:text-neu-text hover:bg-neu-shadow-light/20'
+                  ? 'bg-neu-accent/10 text-neu-accent'
+                  : 'text-neu-text-muted hover:text-neu-text hover:bg-white/5'
                 }
                 ${isCollapsed
                   ? 'justify-center p-3'
@@ -186,7 +186,7 @@ export function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div className={`absolute bottom-0 left-0 right-0 p-4 border-t border-neu-shadow-light/30 ${isCollapsed ? 'text-center' : ''}`}>
+        <div className={`absolute bottom-0 left-0 right-0 p-4 border-t border-neu-border ${isCollapsed ? 'text-center' : ''}`}>
           {!isCollapsed ? (
             <div className="text-xs text-neu-text-muted">
               <div className="font-display font-semibold text-neu-accent">SignalFlow v0.8</div>

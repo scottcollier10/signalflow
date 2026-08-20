@@ -333,7 +333,7 @@ export function ExecutionVisualizer({
         </div>
 
         {/* Canvas - Fills middle row of grid */}
-        <div className="overflow-hidden relative bg-neu-shadow-dark min-h-0">
+        <div className="overflow-hidden relative bg-neu-sidebar min-h-0">
           <WorkflowCanvas
             nodes={updatedNodes}
             edges={edges}
@@ -375,7 +375,7 @@ export function ExecutionVisualizer({
             {onBack && (
               <button
                 onClick={onBack}
-                className="p-2 -ml-2 text-neu-text-muted hover:text-neu-accent hover:bg-neu-shadow-light/20 rounded-lg transition-colors"
+                className="p-2 -ml-2 text-neu-text-muted hover:text-neu-accent hover:bg-white/5 rounded-lg transition-colors"
                 aria-label="Go back"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -454,7 +454,7 @@ export function ExecutionVisualizer({
       </header>
 
       {/* Canvas */}
-      <div className="flex-1 min-h-0 overflow-hidden relative bg-neu-shadow-dark">
+      <div className="flex-1 min-h-0 overflow-hidden relative bg-neu-sidebar">
         <WorkflowCanvas
           nodes={updatedNodes}
           edges={edges}

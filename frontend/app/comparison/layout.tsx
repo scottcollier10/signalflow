@@ -50,9 +50,9 @@ function ComparisonLayoutContent({ children }: { children: React.ReactNode }) {
                 <Link
                   key={variant.href}
                   href={variant.href}
-                  className={`px-5 py-2.5 rounded-neu font-medium transition-all duration-200 ${
+                  className={`px-5 py-2.5 rounded-lg font-medium transition-all duration-200 ${
                     isActive
-                      ? 'bg-neu-accent text-neu-bg shadow-neu-raised-sm'
+                      ? 'bg-neu-accent text-neu-bg'
                       : 'neu-flat text-neu-text hover:text-neu-accent'
                   }`}
                 >
@@ -80,8 +80,8 @@ export default function ComparisonLayout({
       <div className="min-h-screen bg-neu-bg p-8">
         <div className="max-w-6xl mx-auto">
           <div className="mb-8">
-            <div className="h-10 w-64 bg-neu-shadow-light/30 rounded animate-pulse mb-2" />
-            <div className="h-5 w-48 bg-neu-shadow-light/30 rounded animate-pulse" />
+            <div className="h-10 w-64 bg-white/[0.08] rounded animate-pulse mb-2" />
+            <div className="h-5 w-48 bg-white/[0.08] rounded animate-pulse" />
           </div>
         </div>
       </div>
