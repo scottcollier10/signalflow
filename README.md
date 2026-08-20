@@ -1,12 +1,12 @@
 # SignalFlow
 
-![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.128-009688?logo=fastapi&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-pgvector-3FCF8E?logo=supabase&logoColor=white)
 ![n8n](https://img.shields.io/badge/n8n-profiler-EA4B71?logo=n8n&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-12_suites-brightgreen)
+![Tests](https://img.shields.io/badge/tests-18_suites-brightgreen)
 
 **An n8n Workflow Profiler — Graph Algorithms, Composite Scoring, and ML Where Each Actually Belongs**
 
@@ -30,12 +30,12 @@ The claim behind any profiler is "act on my findings and things get faster." Sig
 | | Baseline | After applying recommendations |
 |---|---|---|
 | Duration | ~43s | **13.1s** |
-| Recommendations | 31 | **9** |
+| Recommendations | 32 | **9** |
 | Critical-impact findings | multiple | 0 |
 
 The 9 that remain are the honest floor — architecture hygiene rules plus a legitimate flag on an LLM call still sitting on the critical path. Determinism is verified too: every demo workflow was executed 3x, and the same rules fire on every run.
 
-Reproducible via [demo/](./demo/) (workflow build scripts + import tooling) and the walkthrough in [docs/demo-optimize-loop.md](./docs/demo-optimize-loop.md).
+Documented in [docs/demo-optimize-loop.md](./docs/demo-optimize-loop.md). The [demo/](./demo/) directory contains the workflow build scripts and import tooling used to produce these numbers. Note: the demo scripts currently require a running n8n instance with specific workflow IDs and are not yet portable for external contributors (tracked for a future PR).
 
 ---
 
@@ -63,7 +63,7 @@ Every piece of analysis here uses the tool suited to the problem, not the most i
 
 **V1 feature-complete, audited, and hardened.** Every core analysis path — critical path, bottleneck scoring, error clustering, recommendations — has a passing test suite backed by real fixtures and a real local database, not just isolated unit tests. Runs locally, import-based, no hosted deployment.
 
-See [docs/v1-spec.md](./docs/v1-spec.md) for the V1 specification.
+**Important**: SignalFlow has no authentication layer. It is designed for local development or trusted-network use only. Do not expose the backend to the public internet without adding your own auth.
 
 ---
 
@@ -72,7 +72,7 @@ See [docs/v1-spec.md](./docs/v1-spec.md) for the V1 specification.
 ### Prerequisites
 
 - Node.js 18+
-- Python 3.10+
+- Python 3.11+
 - Docker Desktop (for local Supabase)
 - [Supabase CLI](https://supabase.com/docs/guides/cli)
 
@@ -124,22 +124,29 @@ Visit `http://localhost:3000`, then use **Import** to load an n8n execution JSON
 This has been through an actual audit pass, not just a feature checklist. Along the way it caught a live scoring bug (`priority_score` values rendering as "250.0/100" in the UI before the fix — an inverted effort multiplier), confirmed via `EXPLAIN` that error clustering genuinely queries pgvector's HNSW index rather than loading every embedding into memory, and closed out two tests that were silently passing without actually asserting anything.
 
 ```bash
-# From backend/, with venv active and local Supabase running
-python test_normalizer.py
-python test_parser_continue_on_fail.py
-python test_recommendations.py
-python test_recommendation_data_loading.py
-python test_rule_field_alignment.py
-python test_bottleneck_node_metadata.py
-python test_error_clustering.py
+# From backend/, with venv active
+
+# Credential-free suite (runs in CI, no database or model download needed)
+python -m pytest \
+  test_normalizer.py test_parser_continue_on_fail.py \
+  test_recommendations.py test_recommendation_data_loading.py \
+  test_rule_field_alignment.py test_bottleneck_node_metadata.py \
+  test_api_errors.py test_comparison_logic.py \
+  test_cluster_replacement.py test_dashboard_load_perf.py \
+  test_embedding_dedup.py test_error_embedder_lazy.py \
+  test_http1_supabase_client.py test_parallel_similarity.py \
+  -v --tb=short
+
+# Local Supabase required (supabase start)
 python test_pgvector_search.py
 python test_cluster_persistence.py
 python test_unmapped_nodes.py
-python test_api_errors.py
-python test_comparison_logic.py
+
+# Downloads embedding model (~80MB on first run)
+python test_error_clustering.py
 ```
 
-All twelve exit with a real pass/fail code — none of them print a failure and exit 0. The mock-based suites encode the real database schema (column names, stripped node types, cluster shapes), a deliberate guard after a round of bugs where tests passed against mocks that didn't match production. The pgvector suites refuse to run against a non-local database by design.
+All 18 suites exit with a real pass/fail code — none of them print a failure and exit 0. The mock-based suites encode the real database schema (column names, stripped node types, cluster shapes), a deliberate guard after a round of bugs where tests passed against mocks that didn't match production. The pgvector suites refuse to run against a non-local database by design.
 
 ---
 
@@ -148,13 +155,14 @@ All twelve exit with a real pass/fail code — none of them print a failure and 
 ```
 signalflow/
 ├── README.md               # This file
-├── .project-context.md     # Project context for Claude sessions
+├── CONTRIBUTING.md         # Contributor guide
+├── SECURITY.md             # Security policy
 ├── docs/                   # Documentation
-│   ├── v1-spec.md         # V1 specification
+│   ├── v1-spec.md         # V1 specification (historical)
 │   ├── data-model.sql     # Original schema sketch (historical; live schema is in supabase/migrations/)
 │   └── specs/             # Feature specifications
 ├── supabase/               # Supabase config + live migrations
-├── demo/                   # Demo workflow build scripts + optimize-loop tooling
+├── demo/                   # Demo workflow build scripts (requires local n8n; not yet contributor-portable)
 ├── frontend/               # Next.js application
 │   ├── app/               # Next.js App Router pages
 │   ├── components/        # React components
@@ -164,7 +172,7 @@ signalflow/
     │   ├── normalizer/    # Execution normalizer
     │   ├── analysis/      # Critical path, bottlenecks, recommendations, error clustering
     │   └── services/      # Database, external APIs
-    ├── test_*.py          # Test suite (12 files, see Testing & Verification)
+    ├── test_*.py          # Test suite (18 files, see Testing & Verification)
     └── requirements.txt
 ```
 
@@ -214,13 +222,13 @@ Every recommendation includes:
 
 ## Documentation
 
-- **[V1 Specification](./docs/v1-spec.md)**: Complete MVP scope and timeline
 - **[Demo Guide](./docs/demo-optimize-loop.md)**: The optimize loop — baseline, apply recommendations, compare
 - **[Data Model](./docs/data-model.sql)**: Original schema sketch (historical — live schema is in [supabase/migrations/](./supabase/migrations/))
-- **[Project Context](./.project-context.md)**: Context for Claude sessions
+- **[V1 Specification](./docs/v1-spec.md)**: Original MVP spec (historical — kept for project context)
 
 ### For Developers
 
+- **[Contributing](./CONTRIBUTING.md)**: Setup, testing tiers, PR guidelines
 - **Specs**: [docs/specs/](./docs/specs/) - Feature specifications
 - **Rules**: [backend/src/analysis/recommendations.py](./backend/src/analysis/recommendations.py) - All 37 recommendation rules live in code
 
@@ -275,7 +283,7 @@ See **Testing & Verification** above for the backend test suite.
 
 ## Contributing
 
-SignalFlow is currently in private development. Contributions will be opened after V1 launch.
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup, testing tiers, and PR guidelines.
 
 ---
 
@@ -295,10 +303,4 @@ MIT — see [LICENSE](./LICENSE)
 
 ## Acknowledgments
 
-Built with guidance from Claude (Anthropic) for strategic design and Claude Code for implementation, including an end-to-end audit pass covering logic correctness, test integrity, and documentation accuracy.
-
 Inspired by the need to optimize a 72-node n8n workflow that was taking nearly two minutes per execution.
-
----
-
-**SignalFlow** - Trust through evidence.

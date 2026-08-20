@@ -1,8 +1,10 @@
 # SignalFlow V1 - Complete Specification
 
+> **Historical document.** This spec guided V1 development (January - July 2026). V1 is now complete and audited. The authoritative description of what SignalFlow does is the [README](../README.md). This file is preserved for project-history context, not as a current reference.
+
 **Version**: 1.0  
-**Status**: Ready for Implementation  
-**Timeline**: 8 weeks  
+**Status**: Complete  
+**Timeline**: 8 weeks (completed)  
 **Type**: MVP - Profiler + Failure Pattern Finder
 
 ---

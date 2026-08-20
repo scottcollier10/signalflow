@@ -176,7 +176,7 @@ def test_storage_logs_db_failure():
         with patch("src.normalizer.storage.create_client", return_value=BoomClient()):
             from src.normalizer.storage import ExecutionStorage
 
-            result = asyncio.get_event_loop().run_until_complete(
+            result = asyncio.run(
                 ExecutionStorage().store_execution(normalized)
             )
     finally:
