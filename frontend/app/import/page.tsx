@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout';
 import { updateStepProgress } from '@/components/StepProgress';
 import { API_BASE_URL } from '@/lib/api/config';
+import { migrateCredentials, getApiKey, setApiKey, getInstanceUrl, setInstanceUrl } from '@/lib/credentials';
 
 type ImportMethod = 'file' | 'paste' | 'fetch';
 
@@ -40,32 +41,27 @@ export default function ImportPage() {
   const [n8nApiKey, setN8nApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
 
-  // Load saved values from localStorage on mount
+  // Migrate legacy localStorage credentials and load saved values
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedUrl = localStorage.getItem('n8n_instance_url');
-      const savedApiKey = localStorage.getItem('n8n_api_key');
-      if (savedUrl) setN8nUrl(savedUrl);
-      if (savedApiKey) setN8nApiKey(savedApiKey);
-    }
+    migrateCredentials();
+    const savedUrl = getInstanceUrl();
+    const savedKey = getApiKey();
+    if (savedUrl) setN8nUrl(savedUrl);
+    if (savedKey) setN8nApiKey(savedKey);
   }, []);
 
   // Save n8n URL to localStorage when changed
   const handleN8nUrlChange = (value: string) => {
     setN8nUrl(value);
     setError(null);
-    if (typeof window !== 'undefined' && value) {
-      localStorage.setItem('n8n_instance_url', value);
-    }
+    setInstanceUrl(value);
   };
 
-  // Save API key to localStorage when changed
+  // Save API key to sessionStorage when changed (never localStorage)
   const handleApiKeyChange = (value: string) => {
     setN8nApiKey(value);
     setError(null);
-    if (typeof window !== 'undefined' && value) {
-      localStorage.setItem('n8n_api_key', value);
-    }
+    setApiKey(value);
   };
 
   // Handle file selection
@@ -504,7 +500,7 @@ export default function ImportPage() {
                     Credentials saved to browser
                   </p>
                   <p className="mt-1 text-xs text-neu-text-muted">
-                    Note: credentials are stored unencrypted in browser localStorage. Fine for a local single-user tool; don&apos;t use on a shared machine.
+                    API key is held in sessionStorage (cleared on tab close). Instance URL persists in localStorage.
                   </p>
                 </div>
               )}

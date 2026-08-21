@@ -7,7 +7,6 @@ Engineered to trip:
 - Rule 5  (sync wait): 'wait' in node name
 - Rule 17 (critical-path heavy): each delay node >10% of total duration
 """
-from n8n_api import call
 
 WF_NAME = "SignalFlow Demo 1 — Lead Intake & Enrichment"
 WEBHOOK_PATH = "sf-demo-lead-intake"
@@ -73,14 +72,43 @@ connections = {
     for a, b in zip(order, order[1:])
 }
 
-wf = call("POST", "/workflows", {
+payload = {
     "name": WF_NAME,
     "nodes": nodes,
     "connections": connections,
     "settings": {"executionOrder": "v1", "saveDataSuccessExecution": "all",
                  "saveDataErrorExecution": "all"},
-})
-print(f"Created: {wf['id']}  ({wf['name']}, {len(wf['nodes'])} nodes)")
+}
 
-call("POST", f"/workflows/{wf['id']}/activate")
-print(f"Activated. Webhook: {call.__module__} -> /webhook/{WEBHOOK_PATH}")
+
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Demo 1: Lead Intake & Enrichment")
+    parser.add_argument("--apply", action="store_true", help="Create the workflow on n8n")
+    parser.add_argument("--activate", action="store_true", help="Activate after creation (requires --apply)")
+    args = parser.parse_args()
+
+    if args.activate and not args.apply:
+        parser.error("--activate requires --apply")
+
+    print(f"Workflow: {WF_NAME}")
+    print(f"  Nodes: {len(nodes)}")
+    print(f"  Webhook path: /webhook/{WEBHOOK_PATH}")
+
+    if not args.apply:
+        print("\nDry run. Pass --apply to create, --activate to also activate.")
+        return
+
+    from n8n_api import call
+    wf = call("POST", "/workflows", payload)
+    print(f"Created: {wf['id']}  ({wf['name']}, {len(wf['nodes'])} nodes)")
+
+    if args.activate:
+        call("POST", f"/workflows/{wf['id']}/activate")
+        print(f"Activated. Webhook: /webhook/{WEBHOOK_PATH}")
+    else:
+        print("Not activated. Pass --activate to activate.")
+
+
+if __name__ == "__main__":
+    main()

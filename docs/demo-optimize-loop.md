@@ -94,16 +94,14 @@ what the fast path automates.
 
 ## Reference
 
-| Workflow | Webhook path | n8n id | SignalFlow id |
-|---|---|---|---|
-| Demo 1 Lead Intake | `sf-demo-lead-intake` | S2LBskBqoo1fHCTO | e4d3e4ac-2cb4-420f-8724-f7d1ff4e8a62 |
-| Demo 2 CRM Sync | `sf-demo-crm-sync` | r4ezuLjS8LxFmzur | fd3a889d-5178-4101-9d85-eb63781083f3 |
-| Demo 3 Content Pipeline | `sf-demo-content-pipeline` | UL1TiuFvfDWtsDEF | 9be8d0aa-715a-4673-bc37-85b9fd93d5bd |
+| Workflow | Webhook path |
+|---|---|
+| Demo 1 Lead Intake | `sf-demo-lead-intake` |
+| Demo 2 CRM Sync | `sf-demo-crm-sync` |
+| Demo 3 Content Pipeline | `sf-demo-content-pipeline` |
 
-- Baseline WF3 definition: `demo/build_wf3.py` (re-run it to restore V1; note it
-  POSTs a new workflow, so prefer editing it to PUT to the existing id)
+- Baseline WF3 definition: `demo/build_wf3.py`
 - Optimized WF3 definition: `demo/build_wf3_v2.py`
-- Import mappings: `demo/imported.json`, `demo/imported_v2.json`
 - Rerun all analyses: `demo/rerun_chain.py`
 - Demo 1 and 2 are still at baseline. Demo 2 (CRM Sync) has the richest
   baseline story: 19 rules, 36 errors, semantic clusters, CRITICAL timeouts.

@@ -9,6 +9,7 @@
 import { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout';
 import { API_BASE_URL } from '@/lib/api/config';
+import { migrateCredentials, getApiKey, setApiKey as storeApiKey, getInstanceUrl, setInstanceUrl } from '@/lib/credentials';
 import {
   Save,
   TestTube,
@@ -47,11 +48,16 @@ export default function SettingsPage() {
 
   // Load saved settings on mount
   useEffect(() => {
+    migrateCredentials();
+
+    // API key from sessionStorage, URL from localStorage
+    setN8nUrl(getInstanceUrl());
+    setN8nApiKey(getApiKey());
+
+    // Preferences from the settings blob (no longer contains credentials)
     const savedSettings = localStorage.getItem('signalflow-settings');
     if (savedSettings) {
       const parsed = JSON.parse(savedSettings);
-      setN8nUrl(parsed.n8nUrl || '');
-      setN8nApiKey(parsed.n8nApiKey || '');
       setDefaultView(parsed.defaultView || 'overview');
       setDashboardGrouping(parsed.dashboardGrouping || 'workflow');
       setDefaultBottleneckTab(parsed.defaultBottleneckTab || 'all');
@@ -82,9 +88,12 @@ export default function SettingsPage() {
   };
 
   const saveSettings = () => {
+    // API key to sessionStorage, URL to localStorage (via credential helper)
+    storeApiKey(n8nApiKey);
+    setInstanceUrl(n8nUrl);
+
+    // Preferences only in the blob — no credentials
     const settings = {
-      n8nUrl,
-      n8nApiKey,
       defaultView,
       dashboardGrouping,
       defaultBottleneckTab,
@@ -392,7 +401,7 @@ export default function SettingsPage() {
 
         {/* Version Info */}
         <div className="text-center text-sm text-neu-text-muted py-4">
-          SignalFlow v0.8 • Week 5 Build
+          SignalFlow v1.0
         </div>
       </div>
     </AppLayout>

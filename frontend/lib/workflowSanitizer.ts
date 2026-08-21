@@ -119,7 +119,7 @@ export function sanitizeWorkflowJSON(workflow: N8nWorkflow): SanitizedWorkflow {
   sanitized._signalflow = {
     exportedAt: new Date().toISOString(),
     sanitized: true,
-    note: 'Credentials and secrets have been redacted for security. Attach this file to your Claude Code session along with the optimization prompt.',
+    note: 'Credentials and secrets have been redacted for security. Use this file with the optimization prompt.',
   };
 
   return sanitized;
