@@ -6,11 +6,11 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-pgvector-3FCF8E?logo=supabase&logoColor=white)
 ![n8n](https://img.shields.io/badge/n8n-profiler-EA4B71?logo=n8n&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-18_suites-brightgreen)
+![CI](https://github.com/scottcollier10/signalflow/actions/workflows/ci.yml/badge.svg)
 
 **An n8n Workflow Profiler — Graph Algorithms, Composite Scoring, and ML Where Each Actually Belongs**
 
-SignalFlow reconstructs the true dependency graph behind an n8n execution — what actually blocked completion, not just what looked slow — clusters recurring failures by meaning instead of exact text, and turns both into evidence-backed optimization recommendations. Built to profile a real 72-node, 115-second production workflow that n8n's own execution log couldn't explain on its own.
+SignalFlow infers the execution dependency graph behind an n8n run from observed timing — what actually blocked completion, not just what looked slow — clusters recurring failures by meaning instead of exact text, and turns both into evidence-backed optimization recommendations. Built to profile a real 72-node, 115-second production workflow that n8n's own execution log couldn't explain on its own.
 
 ---
 
@@ -35,7 +35,7 @@ The claim behind any profiler is "act on my findings and things get faster." Sig
 
 The 9 that remain are the honest floor — architecture hygiene rules plus a legitimate flag on an LLM call still sitting on the critical path. Determinism is verified too: every demo workflow was executed 3x, and the same rules fire on every run.
 
-Documented in [docs/demo-optimize-loop.md](./docs/demo-optimize-loop.md). The [demo/](./demo/) directory contains the workflow build scripts and import tooling used to produce these numbers. Note: the demo scripts currently require a running n8n instance with specific workflow IDs and are not yet portable for external contributors (tracked for a future PR).
+Documented in [docs/demo-optimize-loop.md](./docs/demo-optimize-loop.md). The [demo/](./demo/) directory contains the workflow build scripts and import tooling used to produce these numbers. Demo builders preview changes by default (dry run); creating workflows requires `--apply`, and activation additionally requires `--activate`. See [demo/README.md](./demo/README.md) for prerequisites and environment setup.
 
 ---
 
@@ -135,6 +135,7 @@ python -m pytest \
   test_cluster_replacement.py test_dashboard_load_perf.py \
   test_embedding_dedup.py test_error_embedder_lazy.py \
   test_http1_supabase_client.py test_parallel_similarity.py \
+  test_pr4_safety.py \
   -v --tb=short
 
 # Local Supabase required (supabase start)
@@ -146,7 +147,7 @@ python test_unmapped_nodes.py
 python test_error_clustering.py
 ```
 
-All 18 suites exit with a real pass/fail code — none of them print a failure and exit 0. The mock-based suites encode the real database schema (column names, stripped node types, cluster shapes), a deliberate guard after a round of bugs where tests passed against mocks that didn't match production. The pgvector suites refuse to run against a non-local database by design.
+All 19 suites exit with a real pass/fail code — none of them print a failure and exit 0. The mock-based suites encode the real database schema (column names, stripped node types, cluster shapes), a deliberate guard after a round of bugs where tests passed against mocks that didn't match production. The pgvector suites refuse to run against a non-local database by design.
 
 ---
 
@@ -162,7 +163,7 @@ signalflow/
 │   ├── data-model.sql     # Original schema sketch (historical; live schema is in supabase/migrations/)
 │   └── specs/             # Feature specifications
 ├── supabase/               # Supabase config + live migrations
-├── demo/                   # Demo workflow build scripts (requires local n8n; not yet contributor-portable)
+├── demo/                   # Demo workflow build scripts (dry-run by default; see demo/README.md)
 ├── frontend/               # Next.js application
 │   ├── app/               # Next.js App Router pages
 │   ├── components/        # React components
@@ -172,7 +173,7 @@ signalflow/
     │   ├── normalizer/    # Execution normalizer
     │   ├── analysis/      # Critical path, bottlenecks, recommendations, error clustering
     │   └── services/      # Database, external APIs
-    ├── test_*.py          # Test suite (18 files, see Testing & Verification)
+    ├── test_*.py          # Test suite (19 files, see Testing & Verification)
     └── requirements.txt
 ```
 
