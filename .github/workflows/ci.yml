@@ -43,6 +43,7 @@ jobs:
             test_error_embedder_lazy.py \
             test_http1_supabase_client.py \
             test_parallel_similarity.py \
+            test_pr4_safety.py \
             -v --tb=short
 
   frontend:
