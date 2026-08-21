@@ -35,7 +35,7 @@ Most of the codebase is testable locally without any API keys or a running datab
 - Frontend components and styling
 - Documentation
 
-The credential-free test suite (14 files, 60 tests) runs in CI on every push.
+The credential-free test suite (15 files, 73 tests) runs in CI on every push.
 
 ## What Requires Local Supabase
 
@@ -64,6 +64,7 @@ python -m pytest \
   test_cluster_replacement.py test_dashboard_load_perf.py \
   test_embedding_dedup.py test_error_embedder_lazy.py \
   test_http1_supabase_client.py test_parallel_similarity.py \
+  test_pr4_safety.py \
   -v --tb=short
 
 # Frontend
